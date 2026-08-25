@@ -38,7 +38,11 @@ Future<void> parseStatementWorkload(
   ParseStatementInput input,
   WorkloadContext<ParseBatch> context,
 ) async {
-  context.reportProgress(const ProgressReport.starting());
+  // Ước lượng tổng số dòng một lần, ngay đầu: thanh tiến trình có tỷ lệ ngay từ
+  // lô đầu tiên thay vì chỉ quay tròn cho tới lúc xong. `null` là hợp lệ — định
+  // dạng nào không cho biết rẻ tiền thì tiến trình là loại không xác định.
+  final total = input.parser.estimateRowCount(input.bytes);
+  context.reportProgress(ProgressReport(processed: 0, total: total));
 
   final rows = <ParsedRow>[];
   final errors = <ParseError>[];
@@ -69,7 +73,9 @@ Future<void> parseStatementWorkload(
           isLast: !hasNext,
         ),
       );
-      context.reportProgress(ProgressReport(processed: processed));
+      context.reportProgress(
+        ProgressReport(processed: processed, total: total),
+      );
       rows.clear();
       errors.clear();
     }

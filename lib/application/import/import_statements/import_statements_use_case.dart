@@ -1,6 +1,7 @@
 import '../../../core/concurrency/execution_mode.dart';
 import '../../../core/concurrency/isolate_runner.dart';
 import '../../../core/concurrency/progress_report.dart';
+import '../../../core/concurrency/strategy_selector.dart';
 import '../../../core/concurrency/workload_scheduler.dart';
 import '../../../core/persistence/unit_of_work.dart';
 import '../../../core/result/result.dart';
@@ -43,6 +44,7 @@ final class ImportStatementsUseCase {
     required this._imports,
     required this._unitOfWork,
     required this._runner,
+    required this._strategies,
     required this._parserFactory,
     required this._now,
   });
@@ -51,6 +53,7 @@ final class ImportStatementsUseCase {
   final ImportRepository _imports;
   final UnitOfWork _unitOfWork;
   final IsolateRunner _runner;
+  final StrategySelector _strategies;
   final StatementParserFactory _parserFactory;
   final DateTime Function() _now;
 
@@ -67,7 +70,16 @@ final class ImportStatementsUseCase {
     void Function(ImportProgress progress)? onProgress,
   ) async {
     final importedAt = _now();
-    final mode = _runner.effectiveMode(request.strategy);
+    // Chiến lược là quyết định của tầng này, không của giao diện: nó phụ thuộc
+    // vào số file và vào khả năng của nền tảng. `adapt` là chốt chặn cuối — một
+    // chiến lược dùng isolate được truyền vào trên Web sẽ bị hạ về luồng chính
+    // với parallelism 1, đúng chiều suy biến mà UC-14 mô tả (mất song song, các
+    // file phân tích nối tiếp nhau).
+    final strategy = _strategies.adapt(
+      request.strategy ??
+          _strategies.forStatementImport(fileCount: request.files.length),
+    );
+    final mode = _runner.effectiveMode(strategy);
 
     final session = await _imports.addSession(ImportSession.started(importedAt));
     final sessionId = session.sessionId!;
@@ -106,6 +118,7 @@ final class ImportStatementsUseCase {
       }
     }
 
+    final tally = _SessionProgress();
     final scheduler = WorkloadScheduler(_runner);
     final outcomes = await scheduler.runAll<ParseStatementInput, ParseBatch>(
       entryPoint: parseStatementWorkload,
@@ -114,15 +127,20 @@ final class ImportStatementsUseCase {
           ParseStatementInput(
             parser: _parserFactory.parserFor(item.file.format),
             bytes: item.file.bytes,
-            batchSize: request.strategy.batchSize,
+            batchSize: strategy.batchSize,
           ),
       ],
-      strategy: request.strategy,
+      strategy: strategy,
       onOutput: (index, input, batch) => _writeBatch(workItems[index], batch),
       onProgress: onProgress == null
           ? null
-          : (index, input, progress) =>
-                onProgress(_progressOf(workItems, index, progress, mode)),
+          : (index, input, progress) {
+              tally.record(index, progress);
+              onProgress(_progressOf(workItems, index, progress, tally, mode));
+            },
+      // Chỉ kết cục mới nói được một file đã xong; báo cáo tiến trình thì không,
+      // vì nhiều file chạy song song và không đi qua cổng giao hàng.
+      onOutcome: onProgress == null ? null : (_) => tally.completeOne(),
       cancellation: request.cancellation,
     );
 
@@ -246,16 +264,16 @@ final class ImportStatementsUseCase {
     List<_FileWorkItem> items,
     int index,
     ProgressReport progress,
+    _SessionProgress tally,
     ExecutionMode mode,
   ) => ImportProgress(
     fileCount: items.length,
-    // Giao hàng theo thứ tự nên một báo cáo cho file thứ `index` nghĩa là mọi
-    // file trước nó đã ghi xong.
-    completedFiles: index,
-    currentFileIndex: index,
-    currentFileName: items[index].file.fileName,
-    processedInCurrentFile: progress.processed,
-    totalInCurrentFile: progress.total,
+    completedFiles: tally.completedFiles,
+    reportingFileIndex: index,
+    reportingFileName: items[index].file.fileName,
+    processedInFile: progress.processed,
+    totalInFile: progress.total,
+    processedTotal: tally.processedTotal,
     mode: mode,
   );
 
@@ -268,6 +286,28 @@ final class ImportStatementsUseCase {
     duplicateSkippedCount: record.duplicateSkippedCount,
     errorRowCount: record.errorRowCount,
   );
+}
+
+/// Cộng dồn tiến trình của cả lượt.
+///
+/// Cần thiết vì báo cáo tiến trình **không** đi qua cổng giao hàng của
+/// [WorkloadScheduler]: trên native nhiều isolate cùng báo về, xen kẽ nhau và
+/// không theo thứ tự file. Cộng dồn ngây thơ các con số ấy sẽ đếm trùng, nên mỗi
+/// file được nhớ **con số mới nhất của riêng nó** rồi cộng lại.
+final class _SessionProgress {
+  final Map<int, int> _processedByFile = <int, int>{};
+
+  int _completedFiles = 0;
+
+  int get completedFiles => _completedFiles;
+
+  int get processedTotal =>
+      _processedByFile.values.fold(0, (total, rows) => total + rows);
+
+  void record(int index, ProgressReport progress) =>
+      _processedByFile[index] = progress.processed;
+
+  void completeOne() => _completedFiles++;
 }
 
 /// Trạng thái ghi của một file trong lượt: bộ đếm kết quả và sổ chống trùng.

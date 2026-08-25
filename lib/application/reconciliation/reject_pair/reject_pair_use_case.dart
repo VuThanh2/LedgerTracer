@@ -41,8 +41,17 @@ final class RejectPairUseCase {
 
   /// Gỡ một phán quyết từ chối bấm nhầm; cặp đó trở lại làm ứng viên ở lần chạy
   /// đối soát kế tiếp (UC-09 bước 5).
-  Future<Result<void>> undo(int rejectedMatchId) => Result.guardAsync(
-    () => _reconciliation.deleteRejectionById(rejectedMatchId),
-    onError: failureFromError,
-  );
+  /// Gỡ một phán quyết đã ghi nhầm (UC-09 bước 5); cặp được gỡ sẽ trở lại làm
+  /// ứng viên ở lần chạy đối soát kế tiếp.
+  ///
+  /// Báo lỗi khi không còn bản ghi nào để gỡ, thay vì im lặng báo thành công:
+  /// đây là màn hình người dùng vào để **sửa một cái bấm nhầm**, nên "tôi vừa gỡ
+  /// xong" phải là sự thật chứ không phải mặc định lạc quan.
+  Future<Result<void>> undo(int rejectedMatchId) =>
+      Result.guardAsync(() async {
+        final removed = await _reconciliation.deleteRejectionById(
+          rejectedMatchId,
+        );
+        if (!removed) throw RejectedMatchNotFoundError(rejectedMatchId);
+      }, onError: failureFromError);
 }

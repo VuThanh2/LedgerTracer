@@ -1,5 +1,6 @@
 import '../../../core/result/result.dart';
 import '../../../domain/entities/reconciliation_pair.dart';
+import '../../../domain/entities/rejected_match.dart';
 import '../../../domain/entities/transaction.dart';
 import '../../../domain/errors/reconciliation_errors.dart';
 import '../../../domain/repositories/app_settings_repository.dart';
@@ -106,36 +107,62 @@ final class ListMatchAlternativesUseCase {
           pair: view,
           alternativesForOutgoing: await _alternativesFor(
             view.outgoing,
-            exclude: view.incoming.transactionId,
             window: window,
           ),
           alternativesForIncoming: await _alternativesFor(
             view.incoming,
-            exclude: view.outgoing.transactionId,
             window: window,
           ),
         );
       }, onError: failureFromError);
 
+  /// Ứng viên của một vế, tính lại tại thời điểm hiển thị bằng **đúng** điều
+  /// kiện mà lần quét đã dùng (UC-08 bước 3).
+  ///
+  /// Ba tầng lọc, và cả ba đều phải trùng với lần quét:
+  ///
+  /// 1. Giao dịch **đã thuộc một cặp** thì không còn là ứng viên. Cổng lưu trữ
+  ///    lo tầng này bằng các cột có chỉ mục, đúng như `findUnpairedTransactions`
+  ///    lo cho lần quét. Vế còn lại của chính cặp đang xem cũng rơi ra ở đây,
+  ///    nên không cần loại nó bằng tay.
+  /// 2. Cặp **đã bị từ chối** không được gợi ý lại. Tầng này thuộc về tầng
+  ///    Application chứ không về cổng lưu trữ, và đó là chủ đích: lần quét chạy
+  ///    trong isolate, nơi không có cơ sở dữ liệu để hỏi, nên nếu đẩy việc lọc
+  ///    xuống SQL thì hai đường sẽ có hai cách lọc khác nhau — đúng thứ phải
+  ///    tránh. Cả hai đường vì thế cùng dựng tập khoá bằng [RejectedMatch.keyOf].
+  /// 3. Bản thân vị từ ghép cặp, do [MatchPredicate] giữ.
+  ///
+  /// Thiếu một tầng là danh sách này lệch khỏi lần quét, và người dùng sẽ thấy
+  /// một ứng viên có ở màn hình này mà không có ở màn hình kia — riêng với tầng
+  /// 2 thì tệ hơn: từ chối xong vẫn bị gợi ý lại, không có đường ra.
   Future<List<Transaction>> _alternativesFor(
     Transaction anchor, {
-    required int? exclude,
     required MatchWindow window,
   }) async {
-    // Cổng lưu trữ đã thu hẹp bằng các cột có chỉ mục và đã bỏ anchor, các dòng
-    // đã thuộc cặp khác, và các dòng đã bị từ chối với anchor; vị từ mới có tiếng
-    // nói cuối về khả năng ghép.
+    final anchorId = anchor.transactionId;
+    if (anchorId == null) return const <Transaction>[];
+
     final candidates = await _reconciliation.findMatchCandidates(
       anchor: anchor,
       window: window,
     );
+    final rejectedKeys = <String>{
+      for (final rejection in await _reconciliation
+          .findRejectionsForTransaction(anchorId))
+        rejection.key,
+    };
+
     return <Transaction>[
       for (final candidate in MatchPredicate.alternativesFor(
         anchor,
         candidates,
         window,
       ))
-        if (candidate.transactionId != exclude) candidate,
+        if (candidate.transactionId != null &&
+            !rejectedKeys.contains(
+              RejectedMatch.keyOf(anchorId, candidate.transactionId!),
+            ))
+          candidate,
     ];
   }
 

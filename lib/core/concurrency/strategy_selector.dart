@@ -45,6 +45,15 @@ final class StrategySelector {
   ///
   /// Cố ý **không** chặn [ConcurrencyStrategy.parallelism] hay kích thước lô: đo
   /// một cấu hình cố tình tệ chính là mục đích của phần thực nghiệm.
+  /// Chính sách cho khâu mã hoá một file xuất hoặc file sao lưu (UC-11, UC-13).
+  ///
+  /// Một tác vụ CPU chạy đúng một lần trên dữ liệu đã nạp sẵn, không có tiến
+  /// trình theo lô — nên một isolate là đủ và [ConcurrencyStrategy.batchSize]
+  /// ở đây không mang ý nghĩa gì ngoài giá trị mặc định.
+  ConcurrencyStrategy forFileEncoding() => capabilities.supportsIsolates
+      ? ConcurrencyStrategy.singleIsolate()
+      : ConcurrencyStrategy.mainThread();
+
   ConcurrencyStrategy adapt(ConcurrencyStrategy requested) {
     if (requested.mode == ExecutionMode.isolate &&
         !capabilities.supportsIsolates) {

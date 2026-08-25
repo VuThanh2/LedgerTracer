@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import '../../../core/concurrency/cancellation_signal.dart';
+import '../../../core/concurrency/concurrency_strategy.dart';
 import '../../../domain/repositories/transaction_repository.dart';
 import '../../../domain/value_objects/currency.dart';
 import '../../../domain/value_objects/date_range.dart';
@@ -112,11 +114,100 @@ final class ExportResult {
   final int rowCount;
 }
 
-/// Biến [ExportTable] thành bytes theo định dạng, không mã hoá (UC-11). Hiện thực
-/// ở Infrastructure và tự lo việc đẩy phần nặng ra khỏi luồng giao diện nếu cần.
+/// Biến [ExportTable] thành bytes theo định dạng, không mã hoá (UC-11).
+///
+/// **Là một phép biến đổi thuần và đồng bộ, không phải một tác vụ.** Việc đẩy nó
+/// ra khỏi luồng giao diện là quyết định của tầng Application, nơi giữ chính
+/// sách concurrency cho cả ba workload của ứng dụng — để mỗi hiện thực
+/// Infrastructure tự xoay xở là có ba chính sách khác nhau ở ba chỗ không ai
+/// nhìn thấy cùng lúc.
+///
+/// **Ràng buộc bắt buộc — object này đi qua ranh giới isolate**, cùng lý do và
+/// cùng điều kiện với `StatementParser`: bất biến, không giữ tài nguyên gắn với
+/// luồng gốc, không phụ thuộc container DI. Mọi thứ nó cần đến qua tham số.
 abstract interface class TabularExporter {
-  Future<Uint8List> toBytes(ExportTable table, ExportFormat format);
+  Uint8List toBytes(ExportTable table, ExportFormat format);
 }
+
+/// Giai đoạn của một lần xuất, để giao diện nói đúng việc đang chạy (UC-11
+/// bước 3).
+enum ExportStage {
+  /// Đang đọc dữ liệu theo trang từ cơ sở dữ liệu — giai đoạn dài nhất khi tập
+  /// dữ liệu lớn, và là giai đoạn duy nhất huỷ được.
+  collecting,
+
+  /// Đang mã hoá thành bytes.
+  encoding,
+
+  /// Đang lưu file về thiết bị hoặc đẩy qua cơ chế tải xuống.
+  saving,
+}
+
+/// Ảnh chụp tiến trình một lần xuất.
+final class ExportProgress {
+  const ExportProgress({
+    required this.stage,
+    this.processed = 0,
+    this.total,
+  });
+
+  final ExportStage stage;
+
+  /// Số dòng đã gom được, chỉ có nghĩa ở [ExportStage.collecting].
+  final int processed;
+
+  /// Tổng số dòng dự kiến, `null` khi nguồn dữ liệu không đếm trước được.
+  final int? total;
+
+  double? get fraction {
+    final expected = total;
+    if (expected == null || expected <= 0) return null;
+    final ratio = processed / expected;
+    return ratio > 1 ? 1 : ratio;
+  }
+
+  @override
+  String toString() => 'ExportProgress(${stage.name}, $processed/${total ?? '?'})';
+}
+
+/// Yêu cầu xuất, kèm những thứ quanh nó: chiến lược cho khâu mã hoá và tín hiệu
+/// huỷ.
+///
+/// Huỷ chỉ đọc được tại ranh giới giữa các trang, và điều đó an toàn tuyệt đối ở
+/// đây vì xuất là thao tác **chỉ đọc**: không có gì đã ghi để phải quay lui
+/// (UC-11).
+final class ExportDatasetRequest {
+  const ExportDatasetRequest({
+    required this.dataset,
+    this.strategy,
+    this.cancellation,
+  });
+
+  final ExportRequest dataset;
+
+  /// `null` để use case tự chọn theo nền tảng — đường đi bình thường.
+  final ConcurrencyStrategy? strategy;
+
+  final CancellationSignal? cancellation;
+}
+
+/// Đầu vào của khâu mã hoá, đi qua ranh giới isolate.
+final class EncodeTableInput {
+  const EncodeTableInput({
+    required this.exporter,
+    required this.table,
+    required this.format,
+  });
+
+  final TabularExporter exporter;
+  final ExportTable table;
+  final ExportFormat format;
+}
+
+/// **Bắt buộc là hàm top-level**: nó chạy trong isolate và không được đóng gói
+/// trạng thái nào bên ngoài.
+Uint8List encodeExportTable(EncodeTableInput input) =>
+    input.exporter.toBytes(input.table, input.format);
 
 /// Lưu bytes thành file. Trên Android người dùng chọn vị trí; trên Web file đi
 /// qua cơ chế tải xuống (UC-11).

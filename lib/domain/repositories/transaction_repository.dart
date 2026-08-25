@@ -101,25 +101,18 @@ final class CurrencyUsage {
 /// Độ mịn thời gian của biểu đồ dòng tiền; mặc định theo tháng (UC-10 bước 2).
 enum CashFlowPeriod { day, month, year }
 
-/// Một cột của biểu đồ dòng tiền: hoặc một mốc thời gian, hoặc một tài khoản,
-/// tuỳ phép tổng hợp nào sinh ra nó (UC-10).
+/// Một cột của biểu đồ dòng tiền (UC-10).
+///
+/// Là một [sealed class] chứ không phải một lớp có hai trường nullable: một cột
+/// hoặc thuộc về một mốc thời gian, hoặc thuộc về một tài khoản — không bao giờ
+/// cả hai và không bao giờ không có gì. Để cả hai trường nullable thì mọi nơi
+/// đọc đều phải `!` và một phép tổng hợp trả sai loại chỉ đổ vỡ lúc chạy.
 ///
 /// Thống kê luôn được tính, không bao giờ lưu — một con số tổng đã lưu sẽ sai
 /// ngay khi bất kỳ đường nào trong sáu đường thay đổi dữ liệu chạy qua
 /// (Rule – Statistics Are Always Derived, Never Stored).
-final class CashFlowBucket {
-  const CashFlowBucket({
-    this.periodStart,
-    this.accountId,
-    required this.inflow,
-    required this.outflow,
-  });
-
-  /// Ngày đầu của mốc, khi gom nhóm theo thời gian.
-  final DateTime? periodStart;
-
-  /// Tài khoản, khi gom nhóm theo tài khoản.
-  final int? accountId;
+sealed class CashFlowBucket {
+  const CashFlowBucket({required this.inflow, required this.outflow});
 
   /// Tổng các số tiền dương (tiền vào).
   final Money inflow;
@@ -129,6 +122,29 @@ final class CashFlowBucket {
   final Money outflow;
 
   Money get net => inflow + outflow;
+}
+
+/// Một cột khi gom nhóm theo thời gian (UC-10 bước 2).
+final class PeriodCashFlow extends CashFlowBucket {
+  const PeriodCashFlow({
+    required this.periodStart,
+    required super.inflow,
+    required super.outflow,
+  });
+
+  /// Ngày đầu của mốc.
+  final DateTime periodStart;
+}
+
+/// Một cột khi gom nhóm theo tài khoản (UC-10 bước 3).
+final class AccountCashFlow extends CashFlowBucket {
+  const AccountCashFlow({
+    required this.accountId,
+    required super.inflow,
+    required super.outflow,
+  });
+
+  final int accountId;
 }
 
 /// Cổng lưu trữ của aggregate Transaction.
@@ -152,6 +168,11 @@ abstract interface class TransactionRepository {
 
   /// Nạp giao dịch theo một tập định danh — dùng để dựng hai vế của các cặp trên
   /// màn hình đối soát (UC-09).
+  ///
+  /// Tập định danh phải **có giới hạn** (một trang màn hình): nó đi thẳng vào
+  /// mệnh đề `IN (...)` của SQLite, vốn có trần số tham số. Mọi thao tác trên
+  /// tập không giới hạn đều có phương thức riêng nhận khoá phạm vi thay vì danh
+  /// sách id.
   Future<List<Transaction>> findByIds(Iterable<int> transactionIds);
 
   /// Ghi một lô của giai đoạn ghi và trả về định danh vừa cấp, đúng thứ tự
@@ -178,11 +199,16 @@ abstract interface class TransactionRepository {
     required Iterable<Fingerprint> fingerprints,
   });
 
-  /// Định danh các dòng mà một lượt nhập đã ghi — cần để huỷ cặp và xoá phán
-  /// quyết từ chối liên quan trước khi xoá chúng (UC-03, UC-09).
-  Future<List<int>> findIdsByImportFileRecordId(int recordId);
+  /// Lượt nhập này còn bao nhiêu dòng — con số cho hộp thoại xác nhận hoàn tác
+  /// (UC-03 bước 4).
+  ///
+  /// Đếm chứ không nạp danh sách định danh: một bản ghi có thể mang hàng trăm
+  /// nghìn dòng, và không đường nào ở tầng trên cần tới từng id một.
+  Future<int> countByImportFileRecordId(int recordId);
 
-  Future<List<int>> findIdsByAccountId(int accountId);
+  /// Tài khoản này đang có bao nhiêu dòng — con số cho hộp thoại xác nhận xoá
+  /// tài khoản (UC-01).
+  Future<int> countByAccountId(int accountId);
 
   /// Xoá những gì một file đã ghi và trả về số dòng đã mất (UC-03). Xoá vật lý,
   /// không tombstone.
@@ -206,7 +232,7 @@ abstract interface class TransactionRepository {
   /// Khi [excludeInternalTransfers] bật (mặc định của màn hình), các dòng thuộc
   /// cặp **đã xác nhận** bị loại ra, để chuyển tiền nội bộ không bị tính thành
   /// dòng tiền với bên ngoài.
-  Future<List<CashFlowBucket>> aggregateByPeriod({
+  Future<List<PeriodCashFlow>> aggregateByPeriod({
     required Currency currency,
     required CashFlowPeriod period,
     DateRange? dateRange,
@@ -214,7 +240,7 @@ abstract interface class TransactionRepository {
   });
 
   /// Cùng số liệu đó nhưng gom theo tài khoản (UC-10 bước 3).
-  Future<List<CashFlowBucket>> aggregateByAccount({
+  Future<List<AccountCashFlow>> aggregateByAccount({
     required Currency currency,
     DateRange? dateRange,
     bool excludeInternalTransfers = true,

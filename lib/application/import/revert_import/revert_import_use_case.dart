@@ -96,32 +96,38 @@ final class RevertImportUseCase {
       }, onError: failureFromError);
 
   Future<RevertImpact> _revert(ImportFileRecord record) async {
+    // Dựng bản ghi đã hoàn tác **trước tiên**: `revert` là nơi giữ điều kiện
+    // "chưa hoàn tác và đã từng ghi được dòng nào", nên gọi nó đầu tiên biến một
+    // yêu cầu không hợp lệ thành lỗi trước khi có bất cứ thứ gì bị xoá — thay vì
+    // trông chờ transaction quay lui sau khi đã xoá xong.
+    final reverted = record.revert(_now());
+    final recordId = record.recordId!;
     final impact = await _impactOf(record);
-    final transactionIds = await _transactions.findIdsByImportFileRecordId(
-      record.recordId!,
-    );
     // Bất biến về cặp đối soát: xoá một giao dịch thì huỷ cặp dính tới nó và xoá
     // luôn phán quyết từ chối liên quan (UC-09, được UC-03 tham chiếu).
-    await _reconciliation.deletePairsInvolving(transactionIds);
-    await _reconciliation.deleteRejectionsInvolving(transactionIds);
-    await _transactions.deleteByImportFileRecordId(record.recordId!);
-    // `revert` ném nếu đã hoàn tác rồi hoặc chưa ghi gì; giữ bản ghi lại trong
-    // lịch sử với dấu đã hoàn tác thay vì xoá nó.
-    await _imports.updateFileRecord(record.revert(_now()));
+    await _reconciliation.deletePairsByImportFileRecordId(recordId);
+    await _reconciliation.deleteRejectionsByImportFileRecordId(recordId);
+    await _transactions.deleteByImportFileRecordId(recordId);
+    // Bản ghi ở lại lịch sử với dấu đã hoàn tác thay vì bị xoá: `revertedAt`
+    // không phải tombstone, và dòng lỗi của nó vẫn phải xuất lại được (UC-11).
+    await _imports.updateFileRecord(reverted);
     return impact;
   }
 
+  /// Đếm bằng truy vấn có phạm vi, không nạp danh sách định danh: một bản ghi
+  /// nhập có thể mang hàng trăm nghìn dòng, và một danh sách dài như thế vừa
+  /// tốn bộ nhớ luồng chính vừa không lọt qua trần tham số của SQLite.
   Future<RevertImpact> _impactOf(ImportFileRecord record) async {
-    final transactionIds = await _transactions.findIdsByImportFileRecordId(
-      record.recordId!,
+    final recordId = record.recordId!;
+    final transactionCount = await _transactions.countByImportFileRecordId(
+      recordId,
     );
-    final cancelledPairs = await _reconciliation.countPairsInvolving(
-      transactionIds,
-    );
+    final cancelledPairs = await _reconciliation
+        .countPairsByImportFileRecordId(recordId);
     final manualEdits = await _transactions
-        .countManuallyEditedByImportFileRecordId(record.recordId!);
+        .countManuallyEditedByImportFileRecordId(recordId);
     return RevertImpact(
-      deletedTransactionCount: transactionIds.length,
+      deletedTransactionCount: transactionCount,
       cancelledPairCount: cancelledPairs,
       hasManualEdits: manualEdits > 0,
     );

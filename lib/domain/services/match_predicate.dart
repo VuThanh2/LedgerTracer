@@ -1,52 +1,53 @@
-import '../entities/reconciliation_pair.dart';
-import '../entities/transaction.dart';
 import '../value_objects/date_range.dart';
 import '../value_objects/match_window.dart';
+import '../value_objects/money.dart';
 
-/// **Nơi duy nhất** định nghĩa "hai giao dịch này là hai vế của một lần chuyển
-/// tiền nội bộ" (UC-08 bước 3).
+/// Bề mặt tối thiểu mà việc ghép cặp cần đọc được ở một giao dịch.
 ///
-/// Dùng chung cho lần quét theo lô **và** cho danh sách ứng viên được tính lại
-/// khi người dùng mở một cặp (UC-09). Hai bản sao của cùng điều kiện chắc chắn
-/// sẽ lệch nhau, và người dùng sẽ thấy một ứng viên hiện ở màn hình này mà không
-/// hiện ở màn hình kia (Rule – Suggested Is Not Confirmed).
+/// Tồn tại vì cùng một vị từ ghép cặp phải chạy ở **hai nơi có hình dạng dữ liệu
+/// khác nhau**: lần quét theo lô chạy trong isolate (nơi Entity không được đi
+/// qua — xem Ranh giới Isolate) và truy vấn ứng viên lúc hiển thị chạy trên
+/// luồng chính với chính [Transaction]. Trừu tượng hoá bốn thuộc tính này là cách
+/// giữ vị từ ở **đúng một chỗ** thay vì chép nó sang phía isolate rồi để hai bản
+/// lệch nhau (Rule – Suggested Is Not Confirmed).
+abstract interface class MatchCandidate {
+  /// Định danh cục bộ; `null` khi bản ghi chưa được lưu.
+  int? get transactionId;
+
+  int get accountId;
+
+  /// Ngày ghi nhận lấy từ file — không phải đồng hồ thiết bị
+  /// (Rule – File Time and Device Time Are Different Things).
+  DateTime get bookingDate;
+
+  Money get amount;
+}
+
+/// Nơi **duy nhất** định nghĩa thế nào là một cặp chuyển tiền nội bộ hợp lệ
+/// (UC-08 bước 3).
 ///
-/// Thuần và không giữ trạng thái, vì lần quét chạy trong isolate — nơi không với
-/// tới được bất cứ thứ gì trong DI container.
-///
-/// Phán quyết từ chối **không** được tra ở đây: đó là dữ kiện về quá khứ chứ
-/// không phải thuộc tính của hai dòng dữ liệu, nên người gọi tự loại chúng bằng
-/// tập đã nạp từ repository (UC-08).
+/// Điều kiện ghép nằm trọn ở đây, dùng chung cho lần quét theo lô lẫn danh sách
+/// ứng viên được tính lại lúc hiển thị (UC-09). Hai bản sao của cùng một điều
+/// kiện sẽ lệch nhau, và người dùng sẽ thấy một ứng viên xuất hiện ở màn hình này
+/// mà không xuất hiện ở màn hình kia.
 abstract final class MatchPredicate {
-  /// [a] và [b] có được phép ghép thành một cặp hay không:
-  ///
-  /// * khác tài khoản — một tài khoản không tự chuyển cho chính nó, và hai file
-  ///   của hai tài khoản khác nhau không bao giờ là trùng lặp;
-  /// * cùng loại tiền — chuyển tiền có đổi loại tiền nằm ngoài phạm vi, vì tỷ
-  ///   giá và phí làm hai vế lệch cả giá trị
-  ///   (Rule – Currency Belongs to the Transaction and Never Mixes);
-  /// * số tiền đối nhau và khác 0 — dấu đã mang chiều tiền nên một phép kiểm này
-  ///   thay cho việc rẽ nhánh theo từng định dạng nguồn
-  ///   (Rule – The Sign Carries the Direction);
-  /// * ngày ghi nhận nằm trong [window] — ngân hàng xử lý có độ trễ.
-  static bool canPair(Transaction a, Transaction b, MatchWindow window) =>
+  /// Hai giao dịch khác tài khoản, **cùng loại tiền**, số tiền đối nhau, và lệch
+  /// ngày nằm trong cửa sổ. Điều kiện cùng loại tiền do [Money.isOppositeOf] giữ:
+  /// chuyển tiền nội bộ có đổi loại tiền nằm ngoài phạm vi đối soát (UC-08).
+  static bool canPair(MatchCandidate a, MatchCandidate b, MatchWindow window) =>
       a.accountId != b.accountId &&
       a.amount.isOppositeOf(b.amount) &&
       window.covers(a.bookingDate, b.bookingDate);
 
-  /// Số ngày nguyên giữa hai vế, hiển thị kèm mỗi cặp (UC-09 bước 1).
-  static int driftInDays(Transaction a, Transaction b) =>
+  static int driftInDays(MatchCandidate a, MatchCandidate b) =>
       DateRange.daysBetween(a.bookingDate, b.bookingDate).abs();
 
-  /// Mọi ứng viên ghép được với [anchor], tốt nhất đứng trước.
-  ///
-  /// Thứ tự — lệch ngày nhỏ nhất, rồi tới định danh nhỏ nhất — chính là thứ làm
-  /// cho hai lần chạy trên cùng dữ liệu cho ra cùng kết quả. Các ứng viên còn
-  /// lại không bị loại âm thầm: chúng là danh sách thay thế mà UC-09 hiển thị,
-  /// và được **tính lại lúc hiển thị** chứ không lưu sẵn.
-  static List<Transaction> alternativesFor(
-    Transaction anchor,
-    Iterable<Transaction> candidates,
+  /// Mọi ứng viên hợp lệ của [anchor], lệch ngày nhỏ nhất trước; bằng nhau thì
+  /// theo định danh tăng dần để hai lần chạy trên cùng dữ liệu cho ra cùng kết
+  /// quả (UC-08).
+  static List<T> alternativesFor<T extends MatchCandidate>(
+    T anchor,
+    Iterable<T> candidates,
     MatchWindow window,
   ) {
     final matches = candidates
@@ -56,40 +57,26 @@ abstract final class MatchPredicate {
     return matches;
   }
 
-  /// Ứng viên mà lần quét đề xuất cho [anchor], `null` nếu không có ai hợp lệ.
-  static Transaction? bestMatchFor(
-    Transaction anchor,
-    Iterable<Transaction> candidates,
+  /// Ứng viên được chọn làm gợi ý chính — phần tử đầu của [alternativesFor].
+  static T? bestMatchFor<T extends MatchCandidate>(
+    T anchor,
+    Iterable<T> candidates,
     MatchWindow window,
   ) {
     final matches = alternativesFor(anchor, candidates, window);
     return matches.isEmpty ? null : matches.first;
   }
 
-  /// Dựng cặp gợi ý từ hai giao dịch đã thoả [canPair], đặt vế âm vào phía
-  /// chuyển ra. Cả hai bắt buộc đã được lưu, vì cặp trỏ tới định danh.
-  static ReconciliationPair pairOf(
-    Transaction a,
-    Transaction b, {
-    required DateTime createdAt,
-  }) {
-    assert(
-      a.isPersisted && b.isPersisted,
-      'Only persisted transactions can be paired.',
-    );
-    final outgoing = a.isOutgoing ? a : b;
-    final incoming = a.isOutgoing ? b : a;
-    return ReconciliationPair.suggested(
-      outgoingTransactionId: outgoing.transactionId!,
-      incomingTransactionId: incoming.transactionId!,
-      createdAt: createdAt,
-    );
-  }
+  /// Xác định vế nào là chuyển ra, vế nào là nhận vào — **chiều nằm ở dấu của số
+  /// tiền**, không ở một cột loại giao dịch riêng (Rule – The Sign Carries the
+  /// Direction). Chỉ gọi cho hai giao dịch đã qua [canPair].
+  static (T outgoing, T incoming) orient<T extends MatchCandidate>(T a, T b) =>
+      a.amount.isOutgoing ? (a, b) : (b, a);
 
-  static int _compareCandidates(
-    Transaction anchor,
-    Transaction x,
-    Transaction y,
+  static int _compareCandidates<T extends MatchCandidate>(
+    T anchor,
+    T x,
+    T y,
   ) {
     final byDrift = driftInDays(anchor, x).compareTo(driftInDays(anchor, y));
     if (byDrift != 0) return byDrift;

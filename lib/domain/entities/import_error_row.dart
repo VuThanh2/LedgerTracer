@@ -23,13 +23,18 @@ final class ImportErrorRow {
   }) => ImportErrorRow(
     recordId: recordId,
     sourceLineNumber: sourceLineNumber,
-    rawExcerpt: rawLine.length <= maxExcerptLength
-        ? rawLine
-        : '${rawLine.substring(0, maxExcerptLength)}…',
+    rawExcerpt: excerptOf(rawLine),
     reason: reason,
   );
 
   static const int maxExcerptLength = 200;
+
+  /// Cắt một dòng gốc về độ dài lưu được. Là **nơi duy nhất** làm việc cắt này:
+  /// phía isolate cũng dùng nó khi dựng `ParseError`, nên một trích đoạn không
+  /// bao giờ bị cắt hai lần rồi mất thêm ký tự.
+  static String excerptOf(String rawLine) => rawLine.length <= maxExcerptLength
+      ? rawLine
+      : '${rawLine.substring(0, maxExcerptLength)}…';
 
   final int? errorRowId;
 

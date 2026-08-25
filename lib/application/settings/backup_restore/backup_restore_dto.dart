@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import '../contracts/app_data_store.dart';
+
 /// Mã hoá và giải mã file sao lưu (UC-13).
 ///
 /// File sao lưu chứa **toàn bộ** dữ liệu và chỉ để chính ứng dụng đọc lại, nên nó
@@ -26,18 +28,6 @@ final class BackupPasswordException implements Exception {
 
   @override
   String toString() => 'BackupPasswordException: $message';
-}
-
-/// Chụp toàn bộ dữ liệu ra một payload thuần và ghi đè lại từ payload đó.
-///
-/// Việc gói/mở gói toàn bộ cơ sở dữ liệu là của Infrastructure — nó có quyền
-/// chạm tới mọi bảng; use case chỉ điều phối chụp → mã hoá → lưu, và ngược lại.
-/// Khôi phục chỉ hỗ trợ **ghi đè toàn bộ**, không hợp nhất: cả ba tình huống thực
-/// tế (cài lại, mất thiết bị, reset do quên PIN) đều diễn ra trên ứng dụng trống.
-abstract interface class BackupStore {
-  Future<Uint8List> snapshot();
-
-  Future<void> replaceAll(Uint8List plain);
 }
 
 /// Nơi file sao lưu đã được lưu tới.
@@ -79,4 +69,27 @@ final class RestoreRequest {
 
   final Uint8List bytes;
   final String password;
+}
+
+/// Một lần khôi phục **đã kiểm tra xong nhưng chưa ghi gì** (UC-13 bước 3).
+///
+/// Tồn tại vì UC-13 tách bạch hai việc mà phản xạ tự nhiên hay gộp làm một: giải
+/// mã và kiểm toàn vẹn (bước 3) diễn ra **trước**, rồi mới tới cảnh báo "toàn bộ
+/// dữ liệu hiện có sẽ bị thay thế" và chờ người dùng xác nhận (bước 4). Gộp lại
+/// thì hộp thoại cảnh báo hoặc phải hiện lên trước khi biết file có đọc được hay
+/// không — cảnh báo hão về một thao tác sắp thất bại — hoặc phải hiện lên sau
+/// khi dữ liệu đã bị ghi đè, lúc đã quá muộn để hỏi.
+///
+/// Giữ bytes đã giải mã trong bộ nhớ giữa hai bước là chấp nhận được: dữ liệu
+/// nằm cục bộ, không rời khỏi thiết bị, và người dùng vừa tự tay cung cấp mật
+/// khẩu của chính nó.
+final class RestorePlan {
+  const RestorePlan({required this.manifest, required this.plain});
+
+  /// Bản sao lưu này chứa gì — nội dung cho hộp thoại cảnh báo.
+  final BackupManifest manifest;
+
+  /// Khối dữ liệu đã giải mã và đã kiểm. Chỉ use case khôi phục cần tới nó; giao
+  /// diện chỉ đọc [manifest].
+  final Uint8List plain;
 }

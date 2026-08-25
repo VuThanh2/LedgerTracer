@@ -1,5 +1,6 @@
 import '../../../core/persistence/unit_of_work.dart';
 import '../../../core/result/result.dart';
+import '../../../domain/errors/transaction_errors.dart';
 import '../../../domain/repositories/reconciliation_repository.dart';
 import '../../../domain/repositories/transaction_repository.dart';
 import '../../shared/domain_failures.dart';
@@ -33,10 +34,17 @@ final class DeleteTransactionUseCase {
   /// diện thông báo.
   Future<Result<bool>> execute(int transactionId) =>
       Result.guardAsync(() => _unitOfWork.transaction(() async {
-        final cancelled = await _reconciliation.deletePairsInvolving(
-          <int>[transactionId],
+        // Kiểm tồn tại trước khi xoá: không có bước này, xoá một định danh đã
+        // biến mất vẫn báo thành công, và giao diện sẽ nói "đã xoá" về một dòng
+        // mà lần xoá thật sự đã xảy ra ở đâu đó khác.
+        if (await _transactions.findById(transactionId) == null) {
+          throw TransactionNotFoundError(transactionId);
+        }
+        final cancelled = await _reconciliation
+            .deletePairsInvolvingTransaction(transactionId);
+        await _reconciliation.deleteRejectionsInvolvingTransaction(
+          transactionId,
         );
-        await _reconciliation.deleteRejectionsInvolving(<int>[transactionId]);
         await _transactions.deleteById(transactionId);
         return cancelled > 0;
       }), onError: failureFromError);

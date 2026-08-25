@@ -44,7 +44,7 @@ final class ImportFileInput {
 final class ImportStatementsRequest {
   const ImportStatementsRequest({
     required this.files,
-    required this.strategy,
+    this.strategy,
     this.cancellation,
   });
 
@@ -52,7 +52,14 @@ final class ImportStatementsRequest {
   /// một tập file cho cùng một kết quả (Rule – Write Order Is Deterministic).
   final List<ImportFileInput> files;
 
-  final ConcurrencyStrategy strategy;
+  /// Chiến lược concurrency, hoặc `null` để use case tự chọn theo nền tảng và số
+  /// file — đường đi bình thường.
+  ///
+  /// Chỉ màn hình đo đạc mới truyền giá trị tường minh, và ngay cả khi đó nó vẫn
+  /// đi qua `StrategySelector.adapt`: một chiến lược dùng isolate không chạy
+  /// được trên Web, nên để giao diện đặt gì cũng được là mở đường cho một cấu
+  /// hình không thực hiện nổi (UC-14).
+  final ConcurrencyStrategy? strategy;
 
   final CancellationSignal? cancellation;
 }

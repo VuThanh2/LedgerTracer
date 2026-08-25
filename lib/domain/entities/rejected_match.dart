@@ -64,11 +64,20 @@ final class RejectedMatch {
   bool involves(int transactionId) =>
       transactionId == transactionAId || transactionId == transactionBId;
 
-  /// So khớp với một cặp ứng viên, không phụ thuộc thứ tự.
-  bool refuses(int firstTransactionId, int secondTransactionId) =>
-      involves(firstTransactionId) &&
-      involves(secondTransactionId) &&
-      firstTransactionId != secondTransactionId;
+  /// Khoá chính tắc của phán quyết này.
+  String get key => keyOf(transactionAId, transactionBId);
+
+  /// Khoá **không phụ thuộc thứ tự** của một cặp định danh giao dịch: cặp không
+  /// có chiều, nên hai id luôn được xếp tăng dần trước khi ghép chuỗi.
+  ///
+  /// Là **nơi duy nhất** định nghĩa danh tính của một cặp bị từ chối. Lần quét
+  /// đối soát chạy trong isolate không nhận được Entity nên chỉ nhận tập khoá
+  /// này; nếu phía isolate tự dựng lại quy tắc xếp thứ tự thì hai bản sẽ lệch
+  /// nhau và một cặp vừa bị từ chối sẽ được gợi ý lại (UC-08).
+  static String keyOf(int firstTransactionId, int secondTransactionId) =>
+      firstTransactionId < secondTransactionId
+      ? '$firstTransactionId:$secondTransactionId'
+      : '$secondTransactionId:$firstTransactionId';
 
   RejectedMatch withIdentity(int id) => RejectedMatch(
     rejectedMatchId: id,

@@ -75,12 +75,19 @@ final class ManageAccountsUseCase {
       _mutate(accountId, (account) => account.withoutAccountNumber());
 
   /// Số liệu cho hộp thoại xác nhận xoá (UC-01).
+  ///
+  /// Đếm bằng truy vấn có phạm vi chứ không nạp danh sách định danh: một tài
+  /// khoản có thể chứa hàng trăm nghìn giao dịch, và kéo từng ấy id lên luồng
+  /// chính chỉ để lấy hai con số là việc vừa chậm vừa sẽ vỡ ở trần tham số của
+  /// SQLite.
   Future<Result<AccountDeletionImpact>> previewDeletion(int accountId) =>
       Result.guardAsync(() async {
-        final transactionIds = await _transactions.findIdsByAccountId(accountId);
-        final pairs = await _reconciliation.countPairsInvolving(transactionIds);
+        final transactionCount = await _transactions.countByAccountId(
+          accountId,
+        );
+        final pairs = await _reconciliation.countPairsByAccountId(accountId);
         return AccountDeletionImpact(
-          transactionCount: transactionIds.length,
+          transactionCount: transactionCount,
           reconciledPairCount: pairs,
         );
       }, onError: failureFromError);
@@ -92,9 +99,10 @@ final class ManageAccountsUseCase {
     final account = await _accounts.findById(accountId);
     if (account == null) throw AccountNotFoundError(accountId);
     await _unitOfWork.transaction(() async {
-      final transactionIds = await _transactions.findIdsByAccountId(accountId);
-      await _reconciliation.deletePairsInvolving(transactionIds);
-      await _reconciliation.deleteRejectionsInvolving(transactionIds);
+      // Thứ tự bắt buộc: cặp và phán quyết trỏ tới giao dịch, giao dịch trỏ tới
+      // tài khoản — gỡ từ ngoài vào trong.
+      await _reconciliation.deletePairsByAccountId(accountId);
+      await _reconciliation.deleteRejectionsByAccountId(accountId);
       await _transactions.deleteByAccountId(accountId);
       final fileRecords = await _imports.findFileRecordsByAccountId(accountId);
       for (final record in fileRecords) {

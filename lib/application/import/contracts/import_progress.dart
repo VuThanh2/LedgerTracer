@@ -1,58 +1,65 @@
 import '../../../core/concurrency/execution_mode.dart';
 
-/// Ảnh chụp tiến trình của một lượt nhập đang chạy, gửi từ use case lên giao diện
-/// (UC-02 bước 5).
+/// Ảnh chụp tiến trình của một lượt nhập, gửi ra sau mỗi lô (UC-02 bước 5).
 ///
-/// Là trạng thái thực thi, không phải Domain: nó chỉ sống bằng vòng đời của lượt
-/// nhập và không bao giờ được lưu. Nó cộng dồn các `ProgressReport` cấp-lô của
-/// core thành thứ màn hình nhập cần — file nào đang chạy, đã xong bao nhiêu file.
+/// Hình dạng của nó bị quy định bởi một sự thật khó chịu: trên native **nhiều
+/// file được phân tích song song**, nên tại một thời điểm có nhiều hơn một file
+/// đang tiến triển. Vì vậy ở đây không có khái niệm "file hiện tại".
 ///
-/// [mode] đi kèm để màn hình nói thẳng giới hạn nền tảng thay vì giấu nó: trên
-/// Web đây là [ExecutionMode.mainThread], và tiến trình chỉ nhích tại ranh giới
-/// giữa các lô (UC-14).
+/// - [completedFiles] đếm số file đã **ghi xong hẳn**, không phải số file đã bắt
+///   đầu — đó là con số duy nhất tăng đơn điệu và không bao giờ lùi.
+/// - [processedTotal] là tổng số dòng đã phân tích của cả lượt; đây mới là đại
+///   lượng nên gắn vào thanh tiến trình chính.
+/// - [reportingFileIndex] chỉ nói **lô vừa rồi đến từ file nào**, để màn hình
+///   ghi được một dòng trạng thái. Nó nhảy qua nhảy lại giữa các file khi chạy
+///   song song, và đó là hành vi đúng chứ không phải lỗi.
 final class ImportProgress {
   const ImportProgress({
     required this.fileCount,
     required this.completedFiles,
-    required this.currentFileIndex,
-    required this.currentFileName,
-    required this.processedInCurrentFile,
-    this.totalInCurrentFile,
+    required this.reportingFileIndex,
+    required this.reportingFileName,
+    required this.processedInFile,
+    this.totalInFile,
+    required this.processedTotal,
     required this.mode,
   });
 
   final int fileCount;
 
-  /// Số file đã đi tới trạng thái cuối. Vì giai đoạn ghi tuần tự theo thứ tự
-  /// người dùng chọn, một file xong nghĩa là mọi file trước nó cũng đã xong.
+  /// Số file đã ghi xong hẳn (hoàn tất, bị huỷ, hoặc thất bại).
   final int completedFiles;
 
-  /// Thứ tự file đang được ghi (theo thứ tự người dùng chọn).
-  final int currentFileIndex;
+  /// Thứ tự file vừa báo tiến trình, theo thứ tự người dùng chọn.
+  final int reportingFileIndex;
 
-  final String currentFileName;
+  final String reportingFileName;
 
-  final int processedInCurrentFile;
+  /// Số dòng đã phân tích trong riêng file vừa báo.
+  final int processedInFile;
 
-  /// Tổng ước lượng của file hiện tại, hoặc `null` khi chưa xác định được — số
-  /// dòng của một file chỉ biết sau khi đã đọc hết, nên giao diện hiện vòng xoay
-  /// thay vì thanh tiến trình.
-  final int? totalInCurrentFile;
+  /// Ước lượng tổng số dòng của file đó, `null` khi định dạng không cho biết rẻ
+  /// tiền — khi ấy thanh tiến trình của file là loại không xác định.
+  final int? totalInFile;
 
+  /// Tổng số dòng đã phân tích của **cả lượt**, cộng dồn trên mọi file.
+  final int processedTotal;
+
+  /// Chế độ chạy thực tế. Trên Web nó suy biến về luồng chính, và giao diện phải
+  /// nói đúng điều đó thay vì giấu đi (UC-14).
   final ExecutionMode mode;
 
-  /// Xử lý nền có thật sự chạy ngoài luồng giao diện hay không (native vs Web).
   bool get isBackground => mode.isBackground;
 
-  double? get currentFileFraction {
-    final total = totalInCurrentFile;
+  double? get fileFraction {
+    final total = totalInFile;
     if (total == null || total <= 0) return null;
-    final ratio = processedInCurrentFile / total;
+    final ratio = processedInFile / total;
     return ratio > 1 ? 1 : ratio;
   }
 
   @override
   String toString() =>
-      'ImportProgress(file ${currentFileIndex + 1}/$fileCount, '
-      '$processedInCurrentFile/${totalInCurrentFile ?? '?'})';
+      'ImportProgress($completedFiles/$fileCount file(s) done, '
+      '$processedTotal row(s), latest from "$reportingFileName")';
 }

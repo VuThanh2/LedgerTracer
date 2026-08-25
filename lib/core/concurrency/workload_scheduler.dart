@@ -82,12 +82,19 @@ final class WorkloadScheduler {
   /// Nhiều nhất [ConcurrencyStrategy.parallelism] workload chạy cùng lúc. Kết
   /// quả tới [onOutput] mỗi lần một lô, theo thứ tự đầu vào, và danh sách trả về
   /// cũng theo thứ tự đầu vào.
+  ///
+  /// [onProgress] **không** đi qua cổng giao hàng: nó báo đúng lúc workload báo,
+  /// nên nhiều đầu vào đang chạy song song sẽ xen kẽ nhau ở đó. Cái biết chắc
+  /// một đầu vào đã xong là [onOutcome], được gọi ngay khi kết cục của đầu vào
+  /// ấy được chốt — dùng nó nếu cần đếm tiến độ theo đơn vị "đã xong", vì danh
+  /// sách trả về chỉ có sau khi **toàn bộ** lượt kết thúc.
   Future<List<WorkloadOutcome<I>>> runAll<I, O>({
     required WorkloadEntryPoint<I, O> entryPoint,
     required List<I> inputs,
     required ConcurrencyStrategy strategy,
     required Future<void> Function(int index, I input, O output) onOutput,
     void Function(int index, I input, ProgressReport progress)? onProgress,
+    void Function(WorkloadOutcome<I> outcome)? onOutcome,
     CancellationSignal? cancellation,
   }) async {
     if (inputs.isEmpty) return const [];
@@ -98,11 +105,19 @@ final class WorkloadScheduler {
 
     Future<void> runAt(int index) async {
       final input = inputs[index];
+
+      void record(WorkloadOutcome<I> outcome) {
+        outcomes[index] = outcome;
+        onOutcome?.call(outcome);
+      }
+
       if (cancellation?.isCancelled ?? false) {
-        outcomes[index] = WorkloadOutcome<I>(
-          index: index,
-          input: input,
-          status: WorkloadStatus.skipped,
+        record(
+          WorkloadOutcome<I>(
+            index: index,
+            input: input,
+            status: WorkloadStatus.skipped,
+          ),
         );
         return;
       }
@@ -120,22 +135,26 @@ final class WorkloadScheduler {
               : (progress) => onProgress(index, input, progress),
           cancellation: cancellation,
         );
-        outcomes[index] = WorkloadOutcome<I>(
-          index: index,
-          input: input,
-          // Workload trả về bình thường dù nó chạy hết hay dừng theo yêu cầu;
-          // tín hiệu huỷ là thứ phân biệt hai trường hợp.
-          status: (cancellation?.isCancelled ?? false)
-              ? WorkloadStatus.cancelled
-              : WorkloadStatus.completed,
+        record(
+          WorkloadOutcome<I>(
+            index: index,
+            input: input,
+            // Workload trả về bình thường dù nó chạy hết hay dừng theo yêu cầu;
+            // tín hiệu huỷ là thứ phân biệt hai trường hợp.
+            status: (cancellation?.isCancelled ?? false)
+                ? WorkloadStatus.cancelled
+                : WorkloadStatus.completed,
+          ),
         );
       } catch (error, stackTrace) {
-        outcomes[index] = WorkloadOutcome<I>(
-          index: index,
-          input: input,
-          status: WorkloadStatus.failed,
-          error: error,
-          stackTrace: stackTrace,
+        record(
+          WorkloadOutcome<I>(
+            index: index,
+            input: input,
+            status: WorkloadStatus.failed,
+            error: error,
+            stackTrace: stackTrace,
+          ),
         );
       }
     }

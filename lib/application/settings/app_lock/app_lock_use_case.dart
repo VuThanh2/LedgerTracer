@@ -65,9 +65,18 @@ final class AppLockUseCase {
   }, onError: failureFromError);
 
   /// Bật khoá và đặt PIN (UC-12 bước 2).
-  Future<Result<void>> enableLock(String pin) => _update(
-    (settings) => settings.enableLock(pinHash: _hasher.hash(pin)),
-  );
+  /// Bật khoá lần đầu và đặt mã PIN (UC-12 bước 1–2).
+  ///
+  /// Từ chối khi khoá **đang bật**: bật lại một thứ đã bật chỉ có nghĩa là ghi đè
+  /// mã PIN, và làm việc đó mà không hỏi PIN hiện tại thì người đang cầm thiết bị
+  /// mở sẵn vô hiệu hoá được cả lớp bảo vệ. Đổi PIN là [changePin], và nó bắt
+  /// buộc xác thực PIN cũ.
+  Future<Result<void>> enableLock(String pin) =>
+      Result.guardAsync(() async {
+        final settings = await _settings.load();
+        if (settings.appLockEnabled) throw const AppLockAlreadyEnabledError();
+        await _settings.save(settings.enableLock(pinHash: _hasher.hash(pin)));
+      }, onError: failureFromError);
 
   /// Tắt khoá; phải nhập đúng PIN hiện tại trước.
   Future<Result<void>> disableLock(String currentPin) =>
@@ -115,13 +124,6 @@ final class AppLockUseCase {
         }
         return _biometric.authenticate();
       }, onError: failureFromError);
-
-  Future<Result<void>> _update(
-    AppSettings Function(AppSettings settings) change,
-  ) => Result.guardAsync(() async {
-    final settings = await _settings.load();
-    await _settings.save(change(settings));
-  }, onError: failureFromError);
 
   Future<Result<void>> _updateVerified(
     String currentPin,

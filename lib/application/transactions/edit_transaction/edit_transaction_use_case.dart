@@ -47,8 +47,8 @@ final class EditTransactionUseCase {
       // Huỷ cặp mà giao dịch đang thuộc về — cả gợi ý lẫn đã xác nhận — vì đặc
       // trưng ghép cặp vừa bị thay đổi. Không ghi phán quyết từ chối: người dùng
       // đang sửa dữ liệu, không phủ nhận rằng hai giao dịch là một cặp (UC-05).
-      final cancelled = await _reconciliation.deletePairsInvolving(
-        <int>[request.transactionId],
+      final cancelled = await _reconciliation.deletePairsInvolvingTransaction(
+        request.transactionId,
       );
       await _transactions.update(edited);
       return EditTransactionResult(

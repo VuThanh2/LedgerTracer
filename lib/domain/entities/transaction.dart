@@ -1,3 +1,4 @@
+import '../services/match_predicate.dart';
 import '../value_objects/date_range.dart';
 import '../value_objects/fingerprint.dart';
 import '../value_objects/money.dart';
@@ -10,7 +11,7 @@ import '../value_objects/search_text.dart';
 /// vào tài khoản), và không bao giờ mồ côi: mỗi giao dịch luôn trỏ về bản ghi
 /// nhập đã sinh ra nó — chính liên kết đó làm cho việc hoàn tác khả thi
 /// (Rule – Provenance Is What Makes Undo Possible).
-final class Transaction {
+final class Transaction implements MatchCandidate {
   const Transaction({
     this.transactionId,
     required this.accountId,
@@ -67,16 +68,20 @@ final class Transaction {
   /// phải UUID — chỉ một thiết bị sinh id, mà khoá số nguyên rẻ hơn hẳn về chỉ
   /// mục ở quy mô hàng trăm nghìn dòng
   /// (Rule – Identity Is Local and Surrogate; Sameness Is Fingerprint).
+  @override
   final int? transactionId;
 
+  @override
   final int accountId;
 
   /// Ngày ngân hàng ghi nhận, đọc từ file — là **căn cứ duy nhất** để sắp xếp,
   /// lọc, gom nhóm và tính độ lệch ghép cặp
   /// (Rule – File Time and Device Time Are Different Things).
+  @override
   final DateTime bookingDate;
 
   /// Số tiền có dấu kèm loại tiền; dương là tiền vào, âm là tiền ra.
+  @override
   final Money amount;
 
   final String? counterpartyName;

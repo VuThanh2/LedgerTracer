@@ -32,13 +32,16 @@ abstract final class ParsedRowMapper {
 
   /// Biến một lỗi phân tích thành dòng lỗi trỏ về bản ghi file, để xuất lại được
   /// cả khi màn hình tổng kết đã đóng (UC-03, UC-11).
+  /// Dựng thẳng [ImportErrorRow] chứ không qua `ImportErrorRow.from`: trích đoạn
+  /// đã được cắt một lần lúc `ParseError` ra đời, cắt lại sẽ ăn mất thêm một ký
+  /// tự và sinh ra dấu lược đôi.
   static ImportErrorRow toErrorRow(
     ParseError error, {
     required int importFileRecordId,
-  }) => ImportErrorRow.from(
+  }) => ImportErrorRow(
     recordId: importFileRecordId,
     sourceLineNumber: error.sourceLineNumber,
-    rawLine: error.rawExcerpt,
+    rawExcerpt: error.rawExcerpt,
     reason: error.reason,
   );
 }

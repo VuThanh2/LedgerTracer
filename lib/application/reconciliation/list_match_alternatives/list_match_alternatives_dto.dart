@@ -83,9 +83,12 @@ final class RejectedView {
 
 /// Một trang danh sách "Đã từ chối".
 ///
-/// Phân trang bằng [hasMore] thay vì một tổng số: danh sách phán quyết từ chối
-/// thường nhỏ và cổng lưu trữ không đếm riêng nó, nên "còn nữa hay không" là đủ
-/// để cuộn tiếp mà không phải thêm một phép đếm toàn bảng.
+/// Phân trang bằng [hasMore] thay vì một tổng số như [PairsPage], và đó là chủ
+/// đích chứ không phải bỏ sót: một tổng số tồn tại để hiển thị "có N kết quả" và
+/// để dựng thanh cuộn của tập lớn, còn danh sách này chỉ là chỗ người dùng ghé
+/// vào gỡ một phán quyết bấm nhầm (UC-09 bước 5) — mỗi dòng là một lần bấm tay
+/// nên nó không bao giờ lớn. Thêm một phép đếm toàn bảng cho nó là trả chi phí
+/// lấy một con số không màn hình nào dùng.
 final class RejectedPage {
   const RejectedPage({
     required this.items,
