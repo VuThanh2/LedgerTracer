@@ -77,17 +77,20 @@ final class Seed {
 
   /// Chốt lại bộ đếm của bản ghi file cho khớp với số dòng đã gieo, để lịch sử
   /// nhập nói đúng sự thật.
+  ///
+  /// Cộng theo **phần chênh** chứ không cộng thẳng số dòng đếm được: bộ đếm của
+  /// bản ghi lớn dần theo từng lô như ở đường nhập thật, nên cộng thẳng sẽ đếm
+  /// đôi nếu ai đó gieo thêm rồi gọi lại. Gọi bao nhiêu lần cũng cho cùng một
+  /// kết quả.
   Future<void> closeRecord(int recordId) async {
     final record = db.fileRecordRows[recordId]!;
     final imported = db.transactionRows.values
         .where((tx) => tx.importFileRecordId == recordId)
         .length;
+    final missing = imported - record.importedCount;
     await db.imports.updateFileRecord(
-      record.finished(
-        importedCount: imported,
-        duplicateSkippedCount: 0,
-        errorRowCount: 0,
-      ),
+      (missing > 0 ? record.accumulate(importedCount: missing) : record)
+          .finished(),
     );
   }
 

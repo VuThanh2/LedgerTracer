@@ -67,6 +67,16 @@ final class ImportSession {
   ImportSession cancel(DateTime at) =>
       _copyWith(status: ImportSessionStatus.cancelled, completedAt: at);
 
+  /// Chốt một lượt mà tiến trình đã chết giữa chừng, phát hiện ở lần khởi động
+  /// sau (Rule – A Dead Process Leaves Honest Records).
+  ///
+  /// Không nhận mốc thời gian và cố ý để [completedAt] là `null`: không ai biết
+  /// lượt nhập chết lúc nào, và một mốc bịa ra — dù là lúc quét dọn — là một câu
+  /// nói dối đắt hơn hẳn một ô để trống. `null` ở đây đọc được đúng nghĩa "không
+  /// có thời điểm kết thúc nào được ghi lại".
+  ImportSession interrupt() =>
+      _copyWith(status: ImportSessionStatus.interrupted);
+
   ImportSession _copyWith({
     int? sessionId,
     DateTime? completedAt,

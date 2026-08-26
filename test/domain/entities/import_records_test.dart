@@ -41,13 +41,56 @@ void main() {
     });
   });
 
+  group('ImportFileRecord — cộng dồn theo lô', () {
+    // Bộ đếm lớn lên cùng nhịp với các dòng được ghi ra, trong cùng một
+    // transaction. Đây là thứ giữ cho lịch sử nói đúng sự thật khi tiến trình bị
+    // kết liễu giữa chừng: bước chốt cuối lúc đó không chạy.
+
+    test('cộng dồn qua nhiều lô thay vì ghi đè', () {
+      final after = record()
+          .accumulate(importedCount: 2, duplicateSkippedCount: 1)
+          .accumulate(importedCount: 3, errorRowCount: 1);
+      expect(after.importedCount, 5);
+      expect(after.duplicateSkippedCount, 1);
+      expect(after.errorRowCount, 1);
+    });
+
+    test('không đụng tới trạng thái — một lô không kết luận được cả file', () {
+      // Bản ghi vẫn ở `cancelled` cho tới khi có người còn sống chốt lại, nên
+      // chết giữa chừng để lại một file dở dang chứ không phải một file "xong".
+      final after = record().accumulate(importedCount: 9);
+      expect(after.status, ImportFileStatus.cancelled);
+    });
+
+    test('bản ghi đã có dòng thì hoàn tác được ngay, chưa cần chốt', () {
+      // Chính chỗ này là bug cũ: bộ đếm chỉ được ghi ở bước chốt, nên một lượt
+      // nhập bị kết liễu để lại `importedCount = 0` trong khi bảng Transaction
+      // đã có dữ liệu — và `canRevert` khoá luôn, biến các dòng ấy thành mồ côi
+      // không xoá được qua UC-03.
+      expect(record().withIdentity(7).accumulate(importedCount: 1).canRevert,
+          isTrue);
+    });
+
+    test('giữ nguyên nguồn gốc và thứ tự chọn file', () {
+      final after = record(orderIndex: 2).accumulate(importedCount: 1);
+      expect(after.orderIndex, 2);
+      expect(after.sessionId, 1);
+      expect(after.accountId, 2);
+    });
+
+    test('từ chối phần cộng thêm âm', () {
+      expect(
+        () => record().accumulate(importedCount: -1),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+  });
+
   group('ImportFileRecord — chốt kết quả', () {
     test('không dòng lỗi nào thì là hoàn tất', () {
-      final done = record().finished(
-        importedCount: 120,
-        duplicateSkippedCount: 5,
-        errorRowCount: 0,
-      );
+      final done = record()
+          .accumulate(importedCount: 120, duplicateSkippedCount: 5)
+          .finished();
       expect(done.status, ImportFileStatus.completed);
       expect(done.importedCount, 120);
       expect(done.duplicateSkippedCount, 5);
@@ -55,32 +98,25 @@ void main() {
 
     test('có dòng lỗi thì là hỏng một phần, không phải hỏng cả file', () {
       // Một dòng hỏng không được làm dừng các dòng còn lại.
-      final done = record().finished(
-        importedCount: 118,
-        duplicateSkippedCount: 0,
-        errorRowCount: 2,
-      );
+      final done = record()
+          .accumulate(importedCount: 118, errorRowCount: 2)
+          .finished();
       expect(done.status, ImportFileStatus.partiallyFailed);
     });
 
     test('bị huỷ thì là đã huỷ, kể cả khi có dòng lỗi', () {
-      final done = record().finished(
-        importedCount: 40,
-        duplicateSkippedCount: 0,
-        errorRowCount: 3,
-        wasCancelled: true,
-      );
+      final done = record()
+          .accumulate(importedCount: 40, errorRowCount: 3)
+          .finished(wasCancelled: true);
       expect(done.status, ImportFileStatus.cancelled);
       // Phần đã xử lý xong trước thời điểm huỷ vẫn được giữ lại.
       expect(done.importedCount, 40);
     });
 
     test('file toàn dòng trùng vẫn là hoàn tất', () {
-      final done = record().finished(
-        importedCount: 0,
-        duplicateSkippedCount: 200,
-        errorRowCount: 0,
-      );
+      final done = record()
+          .accumulate(duplicateSkippedCount: 200)
+          .finished();
       expect(done.status, ImportFileStatus.completed);
     });
 
@@ -89,11 +125,9 @@ void main() {
     });
 
     test('chốt kết quả không đụng tới thứ tự chọn và nguồn gốc', () {
-      final done = record(orderIndex: 3).finished(
-        importedCount: 1,
-        duplicateSkippedCount: 0,
-        errorRowCount: 0,
-      );
+      final done = record(orderIndex: 3)
+          .accumulate(importedCount: 1)
+          .finished();
       expect(done.orderIndex, 3);
       expect(done.sessionId, 1);
       expect(done.accountId, 2);
@@ -105,11 +139,8 @@ void main() {
   group('ImportFileRecord — hoàn tác', () {
     ImportFileRecord completed({int imported = 10}) => record()
         .withIdentity(4)
-        .finished(
-          importedCount: imported,
-          duplicateSkippedCount: 0,
-          errorRowCount: 0,
-        );
+        .accumulate(importedCount: imported)
+        .finished();
 
     test('bản ghi có dòng đã ghi thì hoàn tác được', () {
       expect(completed().canRevert, isTrue);
@@ -155,11 +186,14 @@ void main() {
       int errors = 0,
       DateTime? revertedAt,
     }) {
-      final finished = record(orderIndex: id - 1).withIdentity(id).finished(
-        importedCount: imported,
-        duplicateSkippedCount: duplicates,
-        errorRowCount: errors,
-      );
+      final finished = record(orderIndex: id - 1)
+          .withIdentity(id)
+          .accumulate(
+            importedCount: imported,
+            duplicateSkippedCount: duplicates,
+            errorRowCount: errors,
+          )
+          .finished();
       return revertedAt == null ? finished : finished.revert(revertedAt);
     }
 
@@ -168,6 +202,20 @@ void main() {
       expect(fresh.status, ImportSessionStatus.inProgress);
       expect(fresh.isFinished, isFalse);
       expect(fresh.completedAt, isNull);
+    });
+
+    test('gián đoạn là trạng thái kết thúc, tách hẳn khỏi huỷ', () {
+      // Huỷ là phán quyết của người dùng và họ biết mình dừng ở đâu; gián đoạn
+      // thì họ không biết gì cả, nên giao diện phải nói hai điều khác nhau.
+      final orphan = session().interrupt();
+      expect(orphan.status, ImportSessionStatus.interrupted);
+      expect(orphan.isFinished, isTrue);
+    });
+
+    test('gián đoạn không bịa ra mốc kết thúc', () {
+      // Không ai biết lượt nhập chết lúc nào. `null` đọc được đúng nghĩa "không
+      // có thời điểm kết thúc nào được ghi lại"; một mốc bịa ra thì không.
+      expect(session().interrupt().completedAt, isNull);
     });
 
     test('hoàn tất và huỷ đều là trạng thái kết thúc, có mốc thời gian', () {

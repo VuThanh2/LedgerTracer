@@ -119,6 +119,7 @@
 - Giao dịch bị xóa do hoàn tác cũng phải tuân bất biến về cặp đối soát nêu tại UC-09; hộp thoại xác nhận ở bước 4 phải báo thêm số cặp đối soát sẽ bị hủy nếu có.
 - Lượt nhập đã hoàn tác vẫn ở lại trong danh sách với trạng thái "đã hoàn tác", không biến mất: bản thân việc đã nhập rồi hoàn tác là thông tin người dùng cần thấy, và danh sách dòng lỗi của nó vẫn phải xuất lại được (UC-11).
 - Lượt nhập bị hủy giữa chừng (UC-02 bước 7) vẫn xuất hiện trong lịch sử với trạng thái "chưa hoàn tất".
+- Lượt nhập bị **gián đoạn** — ứng dụng bị hệ điều hành kết liễu hoặc tab trình duyệt bị đóng khi đang nhập — được phát hiện ở lần khởi động kế tiếp và hiển thị thành một trạng thái riêng, tách khỏi "đã hủy". Người hủy biết mình dừng ở đâu, người bị gián đoạn thì không, nên dòng trạng thái phải nói rõ đã ghi được bao nhiêu giao dịch và rằng nhập lại nguyên file sẽ bổ sung đúng phần còn thiếu. Phần đã ghi được giữ lại và hoàn tác được bình thường như mọi bản ghi khác. Hệ thống **không** chạy tiếp phần dở dang; đây là giới hạn có chủ đích, ghi vào Limitations của báo cáo.
 - Lượt nhập nhiều file hiển thị thành một nhóm gồm các bản ghi con theo từng file. Người dùng hoàn tác được từng file riêng lẻ hoặc cả nhóm; hoàn tác cả nhóm là lần lượt hoàn tác từng bản ghi con theo đúng quy tắc ở trên, không phải một cơ chế xóa riêng.
 - Cho phép xuất lại danh sách dòng lỗi của một lượt nhập đã thực hiện (UC-11), vì người dùng có thể đã đóng màn hình tổng kết ở UC-02 bước 8 trước khi cần đến nó.
 

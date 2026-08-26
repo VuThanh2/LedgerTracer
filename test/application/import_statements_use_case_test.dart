@@ -397,6 +397,90 @@ void main() {
     });
   });
 
+  group('gián đoạn bị động — tiến trình chết, không có mã lệnh nào chạy', () {
+    // Huỷ chủ động là luồng sạch vì có mã lệnh chạy tại thời điểm dừng. Khi hệ
+    // điều hành kết liễu tiến trình thì không có gì chạy cả: `AppLifecycleState`
+    // không được đảm bảo gọi, và trên Web `beforeunload` không cho làm việc bất
+    // đồng bộ. Nên bước chốt cuối không được phép là nơi duy nhất bộ đếm đi
+    // xuống cơ sở dữ liệu.
+
+    test('bộ đếm xuống cơ sở dữ liệu theo từng lô, không đợi bước chốt', () async {
+      final imported = <int>[];
+      db.unitOfWork.onCommit =
+          () => imported.add(db.fileRecordRows.values.single.importedCount);
+
+      await run(
+        <ImportFileInput>[
+          file('a.csv', <String>[
+            row(date: '2025-06-01'),
+            row(date: '2025-06-02'),
+            row(date: '2025-06-03'),
+            row(date: '2025-06-04'),
+          ], accountId: accountA),
+        ],
+        strategy: ConcurrencyStrategy.mainThread(batchSize: 2),
+      );
+
+      // Hai lô, mỗi lô hai dòng, rồi tới lần commit của bước chốt. Con số phải
+      // lớn dần cùng nhịp với các dòng đã ghi — nếu nó chỉ nhảy lên ở lần cuối
+      // thì một lần chết giữa chừng sẽ để lại bản ghi nói 0 trong khi bảng
+      // Transaction đã có dữ liệu.
+      expect(imported, <int>[2, 4, 4]);
+    });
+
+    test('bộ đếm khớp với dữ liệu đã ghi tại mọi ranh giới commit', () async {
+      db.unitOfWork.onCommit = () {
+        for (final record in db.fileRecordRows.values) {
+          final written = db.transactionRows.values
+              .where((tx) => tx.importFileRecordId == record.recordId)
+              .length;
+          final failed = db.errorRows
+              .where((errorRow) => errorRow.recordId == record.recordId)
+              .length;
+          expect(record.importedCount, written, reason: record.fileName);
+          expect(record.errorRowCount, failed, reason: record.fileName);
+        }
+      };
+
+      await run(
+        <ImportFileInput>[
+          file('a.csv', <String>[
+            row(date: '2025-06-01'),
+            row(date: '2025-06-02'),
+            FakeStatementParser.brokenLine(),
+            row(date: '2025-06-03'),
+          ], accountId: accountA),
+          file('b.csv', <String>[
+            row(date: '2025-06-01'),
+            row(date: '2025-07-01'),
+          ], accountId: accountA),
+        ],
+        strategy: ConcurrencyStrategy.mainThread(batchSize: 2),
+      );
+    });
+
+    test('lô toàn dòng trùng vẫn ghi bộ đếm xuống, dù không thêm dòng nào', () async {
+      // `duplicateSkippedCount` là bộ đếm duy nhất không đếm lại được từ đâu:
+      // dòng bị bỏ vì đã có thì không nằm ở bảng nào. Bỏ qua lô không sinh ghi
+      // là mất hẳn con số đó khi tiến trình chết.
+      final lines = <String>[row(date: '2025-08-01'), row(date: '2025-08-02')];
+      await run(<ImportFileInput>[
+        file('a.csv', lines, accountId: accountA),
+      ]);
+
+      final skipped = <int>[];
+      db.unitOfWork.onCommit = () => skipped.add(
+        db.fileRecordRows.values.last.duplicateSkippedCount,
+      );
+      await run(<ImportFileInput>[
+        file('a.csv', lines, accountId: accountA),
+      ]);
+
+      expect(db.transactionRows.length, 2);
+      expect(skipped, <int>[2, 2]);
+    });
+  });
+
   group('huỷ giữa chừng', () {
     test('giữ lại phần đã ghi và bỏ hẳn file chưa bắt đầu', () async {
       final cancellation = CancellationSignal();

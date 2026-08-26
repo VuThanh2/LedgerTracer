@@ -29,6 +29,11 @@ final class ImportFileRecord {
   /// Cố ý bắt đầu ở [ImportFileStatus.cancelled]: nếu ứng dụng chết giữa chừng,
   /// lịch sử phản ánh trung thực một lượt nhập dở dang thay vì báo là đã hoàn
   /// tất. [finished] sẽ chốt lại trạng thái thật sau đó.
+  ///
+  /// Bộ đếm bắt đầu từ 0 rồi lớn dần theo [accumulate], mỗi lô một lần, trong
+  /// cùng transaction với chính các dòng của lô đó — nên bản ghi luôn mô tả đúng
+  /// những gì đang nằm trong bảng Transaction, kể cả khi không còn dòng lệnh nào
+  /// chạy để chốt (Rule – A Dead Process Leaves Honest Records).
   factory ImportFileRecord.started({
     required int sessionId,
     required int accountId,
@@ -83,19 +88,42 @@ final class ImportFileRecord {
 
   ImportFileRecord withIdentity(int id) => _copyWith(recordId: id);
 
-  /// Chốt bản ghi bằng các bộ đếm mà giai đoạn ghi tạo ra.
+  /// Cộng kết quả của **một lô** vào bản ghi.
+  ///
+  /// Là đường duy nhất bộ đếm lớn lên. Người gọi phải lưu bản ghi trả về trong
+  /// cùng ranh giới transaction với các dòng vừa ghi ra: đó chính là thứ làm cho
+  /// bộ đếm nhất quán với nội dung bảng **theo cấu tạo**, thay vì nhờ một bước
+  /// chốt cuối cùng vốn không chạy khi tiến trình bị kết liễu.
+  ///
+  /// `duplicateSkippedCount` là lý do không thể thay bằng việc đếm lại: dòng bị
+  /// bỏ vì đã có không được ghi ở đâu cả, nên không có gì để đếm lại về sau.
+  ImportFileRecord accumulate({
+    int importedCount = 0,
+    int duplicateSkippedCount = 0,
+    int errorRowCount = 0,
+  }) {
+    assert(
+      importedCount >= 0 && duplicateSkippedCount >= 0 && errorRowCount >= 0,
+      'A batch only ever adds to the counters.',
+    );
+    return _copyWith(
+      importedCount: this.importedCount + importedCount,
+      duplicateSkippedCount:
+          this.duplicateSkippedCount + duplicateSkippedCount,
+      errorRowCount: this.errorRowCount + errorRowCount,
+    );
+  }
+
+  /// Chốt trạng thái cuối của file dựa trên các bộ đếm bản ghi đã mang sẵn.
+  ///
+  /// Không nhận bộ đếm từ người gọi: chúng đã được [accumulate] ghi xuống theo
+  /// từng lô, và nhận lại một lần nữa ở đây tức là mở ra đúng cái khe mà mọi
+  /// chuyện hỏng đã chui qua — một bộ đếm sống trong bộ nhớ tiến trình, chỉ khớp
+  /// với cơ sở dữ liệu khi có người còn sống để chốt.
   ///
   /// Trạng thái được suy ra từ kết quả chứ không do người gọi chọn, để mọi
   /// đường nhập phân loại một file theo cùng một cách.
-  ImportFileRecord finished({
-    required int importedCount,
-    required int duplicateSkippedCount,
-    required int errorRowCount,
-    bool wasCancelled = false,
-  }) => _copyWith(
-    importedCount: importedCount,
-    duplicateSkippedCount: duplicateSkippedCount,
-    errorRowCount: errorRowCount,
+  ImportFileRecord finished({bool wasCancelled = false}) => _copyWith(
     status: wasCancelled
         ? ImportFileStatus.cancelled
         : errorRowCount > 0

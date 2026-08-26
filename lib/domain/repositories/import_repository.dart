@@ -17,7 +17,10 @@ abstract interface class ImportRepository {
   /// khi dòng đầu tiên được ghi.
   Future<ImportSession> addSession(ImportSession session);
 
-  /// Lưu trạng thái cuối của một lượt (hoàn tất hoặc bị huỷ).
+  /// Lưu trạng thái cuối của một lượt: hoàn tất, bị người dùng huỷ, hoặc
+  /// bị gián đoạn vì tiến trình chết giữa chừng — trạng thái cuối cùng là
+  /// thứ duy nhất không do chính lượt nhập ghi ra, mà do lượt quét dọn lúc
+  /// khởi động chốt lại (Rule – A Dead Process Leaves Honest Records).
   Future<void> updateSession(ImportSession session);
 
   /// Các lượt nhập từ gần nhất, mỗi lượt kèm bản ghi file của nó — chính là
@@ -29,6 +32,15 @@ abstract interface class ImportRepository {
   });
 
   Future<int> countSessions();
+
+  /// Các lượt còn ở `InProgress`. Tại thời điểm ứng dụng vừa khởi động, mọi lượt
+  /// như thế đều là mồ côi theo đúng định nghĩa — chỉ có một tiến trình, và
+  /// tiến trình đó vừa mới sinh ra, nên không lượt nào có thể đang chạy thật
+  /// (Rule – Single Context Is an Architectural Consequence, và
+  /// Rule – A Dead Process Leaves Honest Records).
+  ///
+  /// Không kèm bản ghi con: nơi gọi chỉ đổi trạng thái của chính lượt nhập.
+  Future<List<ImportSession>> findUnfinishedSessions();
 
   /// Một lượt nhập kèm đầy đủ bản ghi file con — xem hợp đồng ở đầu lớp.
   Future<ImportSession?> findSessionById(int sessionId);

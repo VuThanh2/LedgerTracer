@@ -166,6 +166,12 @@ final class ImportStatementsUseCase {
   /// Đối chiếu chống trùng rồi ghi đúng một lô, trong một ranh giới transaction:
   /// một lô là một đơn vị ghi trọn vẹn, và các lô đã commit trước đó vẫn giữ
   /// nguyên nếu người dùng huỷ ở lô sau (UC-02 bước 7).
+  ///
+  /// Bộ đếm của bản ghi file đi **cùng** lô đó vào trong transaction. Đây là
+  /// điều kiện để lịch sử nói đúng sự thật khi tiến trình bị kết liễu giữa
+  /// chừng: không có bước chốt cuối nào chạy, nên bất cứ con số nào chỉ sống
+  /// trong bộ nhớ đều mất, trong khi các dòng đã commit thì vẫn nằm đó
+  /// (Rule – A Dead Process Leaves Honest Records).
   Future<void> _writeBatch(_FileWorkItem item, ParseBatch batch) async {
     final state = item.state;
     final candidates = <Transaction>[
@@ -196,6 +202,7 @@ final class ImportStatementsUseCase {
     }
 
     final toInsert = <Transaction>[];
+    var duplicateSkipped = 0;
     for (final tx in candidates) {
       final fingerprint = tx.fingerprint;
       final consumed = state.consumed[fingerprint] ?? 0;
@@ -203,7 +210,7 @@ final class ImportStatementsUseCase {
       state.consumed[fingerprint] = consumed + 1;
       if (consumed < existing) {
         // Khớp một bản ghi đã có (lượt trước, hoặc file trước trong lượt này).
-        state.duplicateSkippedCount++;
+        duplicateSkipped++;
       } else {
         toInsert.add(tx);
       }
@@ -217,46 +224,58 @@ final class ImportStatementsUseCase {
         ),
     ];
 
-    if (toInsert.isNotEmpty || errorRows.isNotEmpty) {
-      await _unitOfWork.transaction(() async {
-        if (toInsert.isNotEmpty) await _transactions.addAll(toInsert);
-        if (errorRows.isNotEmpty) await _imports.addErrorRows(errorRows);
-      });
-    }
-    state.importedCount += toInsert.length;
-    state.errorRowCount += errorRows.length;
+    // Một lô toàn dòng trùng không ghi ra dòng nào nhưng vẫn phải cập nhật bộ
+    // đếm — `duplicateSkippedCount` không đếm lại được từ bất cứ đâu, vì dòng bị
+    // bỏ qua không nằm ở đâu cả. Chỉ lô hoàn toàn rỗng mới không có việc gì.
+    if (toInsert.isEmpty && errorRows.isEmpty && duplicateSkipped == 0) return;
+
+    final updated = item.record.accumulate(
+      importedCount: toInsert.length,
+      duplicateSkippedCount: duplicateSkipped,
+      errorRowCount: errorRows.length,
+    );
+    await _unitOfWork.transaction(() async {
+      if (toInsert.isNotEmpty) await _transactions.addAll(toInsert);
+      if (errorRows.isNotEmpty) await _imports.addErrorRows(errorRows);
+      await _imports.updateFileRecord(updated);
+    });
+    // Chỉ nhận bản ghi mới sau khi ranh giới đã commit: transaction quay lui thì
+    // lô đó coi như chưa từng xảy ra, và bản ghi trong bộ nhớ phải theo đúng thế.
+    item.record = updated;
   }
 
   Future<ImportFileRecord> _finalizeFile(
     _FileWorkItem item,
     WorkloadOutcome<ParseStatementInput> outcome,
   ) async {
-    // File hỏng tới mức không tách được dòng nào (ParsingFailure) đi về như một
-    // workload thất bại; ghi lại thành một dòng lỗi để nó vẫn hiện trong lịch sử
-    // và không kéo cả lượt chết theo (UC-02).
-    if (outcome.status == WorkloadStatus.failed) {
-      await _imports.addErrorRows(<ImportErrorRow>[
-        ImportErrorRow.from(
-          recordId: item.record.recordId!,
-          sourceLineNumber: 0,
-          rawLine: item.file.fileName,
-          reason: 'Không đọc được file: ${outcome.error}',
-        ),
-      ]);
-      item.state.errorRowCount++;
-    }
-
     final wasCancelled =
         outcome.status == WorkloadStatus.cancelled ||
         outcome.status == WorkloadStatus.skipped;
 
-    final finished = item.record.finished(
-      importedCount: item.state.importedCount,
-      duplicateSkippedCount: item.state.duplicateSkippedCount,
-      errorRowCount: item.state.errorRowCount,
-      wasCancelled: wasCancelled,
-    );
-    await _imports.updateFileRecord(finished);
+    // Bước chốt chỉ còn đặt trạng thái cuối; các bộ đếm đã theo từng lô xuống cơ
+    // sở dữ liệu rồi. Dòng lỗi của một file không đọc được đi cùng transaction
+    // với bộ đếm của chính nó, đúng như mọi lô khác.
+    final finished = await _unitOfWork.transaction(() async {
+      var record = item.record;
+      // File hỏng tới mức không tách được dòng nào (ParsingFailure) đi về như
+      // một workload thất bại; ghi lại thành một dòng lỗi để nó vẫn hiện trong
+      // lịch sử và không kéo cả lượt chết theo (UC-02).
+      if (outcome.status == WorkloadStatus.failed) {
+        await _imports.addErrorRows(<ImportErrorRow>[
+          ImportErrorRow.from(
+            recordId: record.recordId!,
+            sourceLineNumber: 0,
+            rawLine: item.file.fileName,
+            reason: 'Không đọc được file: ${outcome.error}',
+          ),
+        ]);
+        record = record.accumulate(errorRowCount: 1);
+      }
+      final closed = record.finished(wasCancelled: wasCancelled);
+      await _imports.updateFileRecord(closed);
+      return closed;
+    });
+    item.record = finished;
     return finished;
   }
 
@@ -310,12 +329,14 @@ final class _SessionProgress {
   void completeOne() => _completedFiles++;
 }
 
-/// Trạng thái ghi của một file trong lượt: bộ đếm kết quả và sổ chống trùng.
+/// Sổ chống trùng của một file trong lượt.
+///
+/// Chỉ còn đúng phần **trạng thái thực thi** thật sự: hai bảng tra này chết cùng
+/// tác vụ và không có ý nghĩa nào ngoài nó. Các bộ đếm kết quả từng ở đây đã
+/// chuyển hẳn về `ImportFileRecord` — chúng là dữ liệu bền vững, và giữ thêm một
+/// bản sao trong bộ nhớ chính là chỗ lịch sử đi lệch khỏi bảng Transaction khi
+/// tiến trình chết giữa chừng.
 final class _FileWriteState {
-  int importedCount = 0;
-  int duplicateSkippedCount = 0;
-  int errorRowCount = 0;
-
   /// Số bản ghi đã có cho mỗi fingerprint, chốt lúc gặp đầu tiên trong file.
   final Map<Fingerprint, int> existing = <Fingerprint, int>{};
 
@@ -332,7 +353,11 @@ final class _FileWorkItem {
   });
 
   final ImportFileInput file;
-  final ImportFileRecord record;
+
+  /// Bản ghi **mới nhất đã commit** của file này. Lớn lên theo từng lô, nên nó
+  /// luôn là ảnh trung thực của hàng tương ứng trong cơ sở dữ liệu.
+  ImportFileRecord record;
+
   final DateTime importedAt;
 
   /// Vị trí trong danh sách kết quả theo thứ tự người dùng chọn file.

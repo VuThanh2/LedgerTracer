@@ -73,7 +73,8 @@
 - sessionId
 - startedAt
 - completedAt *(nullable)*
-- status *(InProgress / Completed / Cancelled)*
+- status *(InProgress / Completed / Cancelled / Interrupted)*
+- *(`completedAt` là null khi status là Interrupted: không ai biết lượt nhập chết lúc nào, và một mốc bịa ra đắt hơn một ô để trống)*
 
 ### ImportFileRecord
 
@@ -127,7 +128,7 @@
 - **SearchText** *(chỉ dựng được từ cặp counterpartyName • description qua đúng một thuật toán chuẩn hoá)*
 - **StatementFormat** *(enum: Csv, Excel, Mt940, Json)*
 - **PairStatus** *(enum: Suggested, Confirmed)*
-- **ImportSessionStatus** *(enum: InProgress, Completed, Cancelled)*
+- **ImportSessionStatus** *(enum: InProgress, Completed, Cancelled, Interrupted — xem Rule tương ứng)*
 - **ImportFileStatus** *(enum: Completed, PartiallyFailed, Cancelled, Skipped)*
 - **MatchWindow** *(số ngày > 0; ràng buộc miền của tham số đối soát)*
 - **DateRange • AmountRange** *(tiêu chí lọc ở UC-07; luôn đi theo cặp cận dưới/cận trên hợp lệ. AmountRange bắt buộc mang theo `currency` — một khoảng số tiền không có loại tiền là điều kiện vô nghĩa khi dữ liệu đa tệ)*
@@ -202,6 +203,16 @@ Những kiểu dưới đây không được lưu, không có định danh nghi�
 
 - Mỗi Transaction bắt buộc trỏ về đúng một `ImportFileRecord`. Không có giao dịch "mồ côi": ứng dụng không có chức năng tạo giao dịch thủ công, chỉ có nhập từ file rồi sửa (UC-05).
 - Lý do: hoàn tác ở UC-03 được định nghĩa là "xoá đúng những gì lượt nhập đó đã thêm". Không có liên kết nguồn gốc thì buộc phải suy đoán bằng thời gian nhập hoặc bằng fingerprint — cả hai đều xoá nhầm khi hai lượt nhập cùng tài khoản có phần giao nhau.
+
+### Rule – A Dead Process Leaves Honest Records
+
+- Huỷ chủ động (UC-02 bước 7) và gián đoạn bị động là **hai chuyện khác nhau**, và mô hình phải phân biệt được. Huỷ là phán quyết của người dùng, có mã lệnh chạy tại thời điểm dừng nên tự ghi được trạng thái cuối. Gián đoạn là khi tiến trình bị hệ điều hành kết liễu — Android LMK chọn nạn nhân theo trạng thái nền cộng mức chiếm RAM, mà một lượt nhập file lớn thì đúng cả hai — hoặc khi tab trình duyệt bị đóng. Lúc đó **không có dòng lệnh nào chạy**: `AppLifecycleState.detached` không được đảm bảo gọi tới, và `beforeunload` trên Web không cho làm việc bất đồng bộ.
+- Hệ quả bắt buộc: **không trạng thái bền vững nào được phép chỉ tồn tại trong bộ nhớ tiến trình cho tới một bước chốt cuối cùng.** Bộ đếm của `ImportFileRecord` vì thế lớn lên theo từng lô, trong **cùng transaction SQLite** với chính các dòng của lô đó — nhất quán theo cấu tạo, không nhờ một bước dọn dẹp về sau. `ImportFileRecord` cũng mở ra ở trạng thái `Cancelled` chứ không phải `Completed`, cùng một lý do.
+- `duplicateSkippedCount` là chỗ không có đường lùi: dòng bị bỏ vì đã có không được ghi ở đâu cả, nên không thể đếm lại bằng truy vấn như `importedCount` hay `errorRowCount`. Ghi nó theo từng lô là cách duy nhất giữ được con số ấy.
+- `ImportSession` thì không tự bảo vệ được — nó chỉ chuyển sang trạng thái cuối bằng một lần ghi ở cuối lượt. Nên nó được dọn ở **lần khởi động kế tiếp**: mọi lượt còn `InProgress` tại thời điểm ứng dụng vừa mở đều là mồ côi. Đây không phải suy đoán mà là hệ quả trực tiếp của *Rule – Single Context Is an Architectural Consequence*: chỉ có một tiến trình, và tiến trình duy nhất có thể ghi lúc đó là tiến trình vừa sinh ra, vốn chưa mở lượt nhập nào. Không cần heartbeat, không cần timestamp.
+- `Interrupted` tách khỏi `Cancelled` vì hai bên phải nói với người dùng hai điều khác nhau. Người huỷ biết mình dừng ở đâu; người bị gián đoạn không biết gì cả, nên giao diện phải nói rõ đã ghi được bao nhiêu giao dịch và rằng nhập lại nguyên file sẽ bổ sung đúng phần còn thiếu. Gộp hai trạng thái làm một là mất đúng phần thông tin mà người dùng cần.
+- **Không có chức năng chạy tiếp phần dở dang.** Muốn thế phải bền hoá vị trí đọc trong file, offset của parser và trạng thái hàng đợi — một tính năng riêng đúng nghĩa. Trong khi đó chống trùng ở UC-02 là phép *đếm*, nên nhập lại nguyên file cho ra đúng kết quả ấy với chi phí gần như bằng không. Đây là giới hạn có chủ đích, ghi vào Limitations của báo cáo.
+- Một điểm phản trực giác đáng nói riêng trong báo cáo: **đưa ứng dụng ra nền không dừng lượt nhập.** Trên native, Flutter engine chỉ tách khỏi surface và `SchedulerBinding` ngừng phát frame; event loop và các isolate vẫn chạy, nên import vẫn tiếp tục, chỉ là không repaint. Trên Web thì khác hẳn — phân tích và ghi cùng nằm trên một luồng (UC-14) và trình duyệt bóp timer của tab nền, nên lượt nhập **chậm lại thật**. Cùng một thao tác của người dùng, hai nền tảng hai hành vi: đây là ví dụ trực tiếp cho phần so sánh mô hình isolate của Dart trên native và trên Web.
 
 ### Rule – Write Order Is Deterministic
 

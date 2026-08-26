@@ -123,6 +123,15 @@ final class FakeUnitOfWork implements UnitOfWork {
   int committed = 0;
   int rolledBack = 0;
 
+  /// Gọi sau mỗi lần ranh giới **ngoài cùng** commit.
+  ///
+  /// Có mặt vì một lớp bất biến của hệ thống không phải "đúng ở cuối use case"
+  /// mà là "đúng tại mọi thời điểm dữ liệu nằm yên trên đĩa": tiến trình có thể
+  /// bị hệ điều hành kết liễu ngay sau bất kỳ lần commit nào, và khi đó không
+  /// còn dòng lệnh nào chạy để dọn dẹp. Kiểm ở cuối test không bắt được loại lỗi
+  /// đó, kiểm ở đây thì có.
+  void Function()? onCommit;
+
   @override
   Future<T> transaction<T>(Future<T> Function() action) async {
     final snapshot = _db.snapshot();
@@ -130,6 +139,7 @@ final class FakeUnitOfWork implements UnitOfWork {
     try {
       final result = await action();
       committed++;
+      if (depth == 1) onCommit?.call();
       return result;
     } catch (_) {
       _db.restore(snapshot);
@@ -436,6 +446,13 @@ final class FakeImportRepository implements ImportRepository {
 
   @override
   Future<int> countSessions() async => _db.sessionRows.length;
+
+  @override
+  Future<List<ImportSession>> findUnfinishedSessions() async => _db
+      .sessionRows
+      .values
+      .where((session) => !session.isFinished)
+      .toList();
 
   @override
   Future<ImportSession?> findSessionById(int sessionId) async {
