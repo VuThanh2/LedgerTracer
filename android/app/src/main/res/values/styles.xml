@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Theme applied to the Android Window while the process is starting when the OS's Dark Mode setting is off -->
-    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <!-- Theme gốc là AppCompat, không phải theme của hệ thống: androidx.biometric
+         dựng hộp thoại vân tay bằng androidx.appcompat.app.AlertDialog trên
+         Android 8.1 trở xuống, và AlertDialog đó **ném lỗi** nếu theme của
+         Activity không mang các thuộc tính AppCompat. Vì minSdk của dự án là 24
+         (Android 7.0), nhóm máy đó nằm trong phạm vi hỗ trợ. -->
+    <style name="LaunchTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Show a splash screen on the activity. Automatically removed when
              the Flutter engine draws its first frame -->
         <item name="android:windowBackground">@drawable/launch_background</item>
@@ -12,7 +17,11 @@
          running.
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
-    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <!-- Theme này mới là theme thật sự đang áp dụng lúc hộp thoại vân tay hiện
+         lên: FlutterActivity đổi sang nó trong onCreate qua meta-data
+         `io.flutter.embedding.android.NormalTheme`. Vì vậy nó bắt buộc phải là
+         AppCompat, còn LaunchTheme ở trên đổi theo cho nhất quán. -->
+    <style name="NormalTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
 </resources>

@@ -38,6 +38,16 @@ android {
     }
 }
 
+dependencies {
+    // Khai báo tường minh, dù androidx.biometric (do local_auth kéo về) cũng phụ
+    // thuộc appcompat: phụ thuộc đó ở scope `runtime`, nên nó có mặt lúc chạy
+    // nhưng không phải thứ được cam kết có mặt lúc **liên kết tài nguyên**. Mà
+    // `res/values/styles.xml` lại tham chiếu `Theme.AppCompat.*` ngay lúc build.
+    // Dựa vào một phụ thuộc bắc cầu để phân giải tài nguyên là đúng loại giả
+    // định sẽ vỡ khi nâng phiên bản thư viện, nên nó được nói thẳng ở đây.
+    implementation("androidx.appcompat:appcompat:1.7.0")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
