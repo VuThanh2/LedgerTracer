@@ -47,6 +47,3 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 sample_data/large/
-
-#Other
-ai-agent-workspace-pack-main/
