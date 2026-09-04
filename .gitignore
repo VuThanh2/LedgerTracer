@@ -49,7 +49,7 @@ app.*.map.json
 sample_data/large/
 
 #Other
-/_agent_ops/
+/ai-agent-workspace-pack
 /.claude/
 /.codex/
 /AGENTS.md
