@@ -34,14 +34,29 @@ final class StatisticsBloc extends Bloc<StatisticsEvent, StatisticsState> {
   }) : _cashFlow = viewCashFlow,
        _pairs = listPairs,
        super(const StatisticsState()) {
-    on<StatisticsStarted>(_onStarted, transformer: EventTransformers.restartable());
+    on<StatisticsStarted>(
+      _onStarted,
+      transformer: EventTransformers.restartable(),
+    );
     // Bốn điều khiển còn lại đều **thay thế** thứ đang xem, nên lượt đọc cũ
     // không còn ai cần: bấm nhanh qua ba tab loại tiền chỉ nên tốn một lượt đọc
     // hoàn tất, không phải ba.
-    on<StatisticsCurrencySelected>(_onCurrencySelected, transformer: EventTransformers.restartable());
-    on<StatisticsPeriodChanged>(_onPeriodChanged, transformer: EventTransformers.restartable());
-    on<StatisticsDateRangeChanged>(_onDateRangeChanged, transformer: EventTransformers.restartable());
-    on<StatisticsInternalTransfersToggled>(_onExcludeToggled, transformer: EventTransformers.restartable());
+    on<StatisticsCurrencySelected>(
+      _onCurrencySelected,
+      transformer: EventTransformers.restartable(),
+    );
+    on<StatisticsPeriodChanged>(
+      _onPeriodChanged,
+      transformer: EventTransformers.restartable(),
+    );
+    on<StatisticsDateRangeChanged>(
+      _onDateRangeChanged,
+      transformer: EventTransformers.restartable(),
+    );
+    on<StatisticsInternalTransfersToggled>(
+      _onExcludeToggled,
+      transformer: EventTransformers.restartable(),
+    );
   }
 
   final ViewCashFlowUseCase _cashFlow;
@@ -59,7 +74,7 @@ final class StatisticsBloc extends Bloc<StatisticsEvent, StatisticsState> {
         emit(
           state.copyWith(
             status: LoadStatus.failed,
-            error: FailurePresenter.of(failure, context: 'số liệu thống kê'),
+            error: FailurePresenter.of(failure, context: 'statistics'),
           ),
         );
         return;
@@ -183,7 +198,7 @@ final class StatisticsBloc extends Bloc<StatisticsEvent, StatisticsState> {
       emit(
         state.copyWith(
           status: LoadStatus.failed,
-          error: FailurePresenter.of(failure, context: 'số liệu thống kê'),
+          error: FailurePresenter.of(failure, context: 'statistics'),
         ),
       );
       return;

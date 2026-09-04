@@ -68,7 +68,7 @@ final class AppShellBloc extends Bloc<AppShellEvent, AppShellState> {
             status: LoadStatus.ready,
             recoveryNotice: FailurePresenter.of(
               failure,
-              context: 'lịch sử nhập',
+              context: 'import history',
             ),
           ),
         );
@@ -110,10 +110,7 @@ final class AppShellBloc extends Bloc<AppShellEvent, AppShellState> {
   ) => emit(
     state.copyWith(
       destination: event.intent.destination,
-      pendingNavigation: PendingNavigation(
-        event.intent,
-        ++_navigationSequence,
-      ),
+      pendingNavigation: PendingNavigation(event.intent, ++_navigationSequence),
     ),
   );
 
@@ -135,8 +132,8 @@ final class AppShellBloc extends Bloc<AppShellEvent, AppShellState> {
   FeedbackMessage _interruptedNoticeOf(ImportRecoveryReport report) {
     final count = report.interruptedSessionCount;
     return FeedbackMessage.warning(
-      '$count lượt nhập bị gián đoạn ở lần chạy trước. Phần đã ghi vẫn được '
-      'giữ; nhập lại đúng những file đó sẽ chỉ bổ sung phần còn thiếu.',
+      '$count import runs were interrupted last time. Committed rows are kept; '
+      'importing those same files again only fills in what is missing.',
     );
   }
 }

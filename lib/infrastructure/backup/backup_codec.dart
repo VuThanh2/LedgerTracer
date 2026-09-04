@@ -80,12 +80,12 @@ final class AesGcmBackupCodec implements BackupCodec {
       // không phải "sai mật khẩu" — hai chuyện dẫn tới hai việc khác nhau mà
       // người dùng phải làm tiếp (UC-13).
       throw const CorruptBackupException(
-        'File này không phải bản sao lưu của LedgerTracer.',
+        'This file is not a LedgerTracer backup.',
       );
     }
     if (cipher[_magic.length] != _formatVersion) {
       throw const CorruptBackupException(
-        'Bản sao lưu được tạo bởi một phiên bản ứng dụng không tương thích.',
+        'This backup was made by an incompatible version of the app.',
       );
     }
 

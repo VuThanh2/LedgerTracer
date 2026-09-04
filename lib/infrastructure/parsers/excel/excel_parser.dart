@@ -55,7 +55,8 @@ final class ExcelParser implements StatementParser {
 
     if (layout == null) {
       throw const FormatException(
-        'Không tìm thấy dòng tiêu đề có cột ngày và số tiền trong file Excel.',
+        'No header row with a date column and an amount column was found in the '
+      'Excel file.',
       );
     }
   }
@@ -136,13 +137,13 @@ final class _XlsxWorkbook {
     try {
       archive = ZipDecoder().decodeBytes(bytes);
     } on ArchiveException catch (error) {
-      throw FormatException('File Excel không đọc được: ${error.message}');
+      throw FormatException('The Excel file could not be read: ${error.message}');
     }
 
     final sheetPath = _firstSheetPath(archive);
     final sheetXml = _textOf(archive, sheetPath);
     if (sheetXml == null) {
-      throw const FormatException('File Excel không có sheet dữ liệu nào.');
+      throw const FormatException('The Excel file has no data sheet.');
     }
     return _XlsxWorkbook._(
       sheetXml: sheetXml,

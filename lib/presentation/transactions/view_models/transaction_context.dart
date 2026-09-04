@@ -85,9 +85,8 @@ final class TransactionContext {
   /// thị hay không.
   bool get narrowsInMemory => isNotEmpty;
 
-  TransactionContext withoutImport() => TransactionContext(
-    excludeInternalTransfers: excludeInternalTransfers,
-  );
+  TransactionContext withoutImport() =>
+      TransactionContext(excludeInternalTransfers: excludeInternalTransfers);
 
   TransactionContext withoutInternalExclusion() => TransactionContext(
     importFileRecordId: importFileRecordId,
@@ -118,8 +117,7 @@ final class TransactionContext {
   bool keeps(TransactionListItem item) {
     if (excludeInternalTransfers && item.isReconciled) return false;
     final recordId = importFileRecordId;
-    if (recordId != null &&
-        item.transaction.importFileRecordId != recordId) {
+    if (recordId != null && item.transaction.importFileRecordId != recordId) {
       return false;
     }
     return true;

@@ -29,7 +29,9 @@ final class FilePickerService {
   ///
   /// Trả về danh sách rỗng khi người dùng đóng hộp thoại mà không chọn gì.
   Future<List<PickedFile>> pickStatements() async {
-    final files = await FilePicker.pickFiles(dialogTitle: 'Chọn file sao kê');
+    final files = await FilePicker.pickFiles(
+      dialogTitle: 'Choose statement files',
+    );
     return <PickedFile>[
       for (final file in files)
         PickedFile(fileName: file.name, bytes: await file.readAsBytes()),
@@ -41,7 +43,7 @@ final class FilePickerService {
   /// Trả `null` khi người dùng huỷ.
   Future<PickedFile?> pickBackup() async {
     final file = await FilePicker.pickFile(
-      dialogTitle: 'Chọn file sao lưu',
+      dialogTitle: 'Choose a backup file',
     );
     if (file == null) return null;
     final Uint8List bytes = await file.readAsBytes();

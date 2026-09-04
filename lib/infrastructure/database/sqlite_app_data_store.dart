@@ -97,7 +97,7 @@ final class SqliteAppDataStore implements AppDataStore {
       decoded = jsonDecode(utf8.decode(plain, allowMalformed: true));
     } on FormatException catch (error) {
       throw CorruptBackupException(
-        'Nội dung bản sao lưu không đọc được: ${error.message}',
+        'The backup contents could not be read: ${error.message}',
       );
     }
 
@@ -107,7 +107,7 @@ final class SqliteAppDataStore implements AppDataStore {
     final version = decoded['version'];
     if (version is! int || version > _version) {
       throw const CorruptBackupException(
-        'Bản sao lưu được tạo bởi một phiên bản ứng dụng mới hơn.',
+        'This backup was made by a newer version of the app.',
       );
     }
     final createdAt = DateTime.tryParse(

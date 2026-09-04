@@ -14,10 +14,10 @@ enum NavDestination {
   statistics;
 
   String get label => switch (this) {
-    NavDestination.transactions => 'Giao dịch',
-    NavDestination.import => 'Nhập',
-    NavDestination.reconciliation => 'Đối soát',
-    NavDestination.statistics => 'Thống kê',
+    NavDestination.transactions => 'Transactions',
+    NavDestination.import => 'Import',
+    NavDestination.reconciliation => 'Reconcile',
+    NavDestination.statistics => 'Statistics',
   };
 }
 

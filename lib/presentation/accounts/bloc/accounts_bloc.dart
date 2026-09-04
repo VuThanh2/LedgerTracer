@@ -27,16 +27,31 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
   AccountsBloc({required ManageAccountsUseCase manageAccounts})
     : _accounts = manageAccounts,
       super(const AccountsState()) {
-    on<AccountsStarted>(_onStarted, transformer: EventTransformers.restartable());
+    on<AccountsStarted>(
+      _onStarted,
+      transformer: EventTransformers.restartable(),
+    );
     // Mọi lệnh ghi đều tuần tự: hai lệnh chồng nhau thì lệnh sau đọc phải trạng
     // thái trước khi lệnh trước kịp xong.
     on<AccountAdded>(_onAdded, transformer: EventTransformers.sequential());
     on<AccountRenamed>(_onRenamed, transformer: EventTransformers.sequential());
-    on<AccountNumberChanged>(_onNumberChanged, transformer: EventTransformers.sequential());
-    on<AccountNumberCleared>(_onNumberCleared, transformer: EventTransformers.sequential());
-    on<AccountDeleteRequested>(_onDeleteRequested, transformer: EventTransformers.sequential());
+    on<AccountNumberChanged>(
+      _onNumberChanged,
+      transformer: EventTransformers.sequential(),
+    );
+    on<AccountNumberCleared>(
+      _onNumberCleared,
+      transformer: EventTransformers.sequential(),
+    );
+    on<AccountDeleteRequested>(
+      _onDeleteRequested,
+      transformer: EventTransformers.sequential(),
+    );
     on<AccountDeleteDismissed>(_onDeleteDismissed);
-    on<AccountDeleteConfirmed>(_onDeleteConfirmed, transformer: EventTransformers.sequential());
+    on<AccountDeleteConfirmed>(
+      _onDeleteConfirmed,
+      transformer: EventTransformers.sequential(),
+    );
   }
 
   final ManageAccountsUseCase _accounts;
@@ -55,8 +70,7 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
     await _applyMutation(
       emit,
       result,
-      onSuccess: (account) =>
-          'Đã thêm tài khoản "${account.displayName}".',
+      onSuccess: (account) => 'Account "${account.displayName}" added.',
     );
   }
 
@@ -68,7 +82,7 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
     await _applyMutation(
       emit,
       result,
-      onSuccess: (account) => 'Đã đổi tên thành "${account.displayName}".',
+      onSuccess: (account) => 'Renamed to "${account.displayName}".',
     );
   }
 
@@ -84,7 +98,7 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
       emit,
       result,
       onSuccess: (account) =>
-          'Đã cập nhật số tài khoản. Các lần nhập sau sẽ đối chiếu với số này.',
+          'Account number updated. Later imports will check against it.',
     );
   }
 
@@ -97,7 +111,8 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
       emit,
       result,
       onSuccess: (_) =>
-          'Đã xoá số tài khoản. Lần nhập kế tiếp sẽ học lại từ file sao kê.',
+          'Account number cleared. The next import will learn it again from '
+          'the statement file.',
     );
   }
 
@@ -108,7 +123,7 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
     final result = await _accounts.previewDeletion(event.accountId);
     switch (result) {
       case Err<AccountDeletionImpact>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'tài khoản')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'account')));
       case Ok<AccountDeletionImpact>(:final value):
         emit(
           state.copyWith(
@@ -141,7 +156,7 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
         emit(
           state.copyWith(
             clearPendingDelete: true,
-            notice: _noticeOf(failure, 'tài khoản'),
+            notice: _noticeOf(failure, 'account'),
           ),
         );
       case Ok<void>():
@@ -149,8 +164,8 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
           state.copyWith(
             clearPendingDelete: true,
             notice: _notices.success(
-              'Đã xoá tài khoản "${pending.displayName}" cùng toàn bộ dữ liệu '
-              'của nó.',
+              'Account "${pending.displayName}" and all of its data were '
+              'deleted.',
             ),
           ),
         );
@@ -171,7 +186,7 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
   }) async {
     switch (result) {
       case Err<BankAccount>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'tài khoản')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'account')));
       case Ok<BankAccount>(:final value):
         emit(state.copyWith(notice: _notices.success(onSuccess(value))));
         await _reload(emit);
@@ -185,7 +200,7 @@ final class AccountsBloc extends Bloc<AccountsEvent, AccountsState> {
         emit(
           state.copyWith(
             status: LoadStatus.failed,
-            loadError: FailurePresenter.of(failure, context: 'tài khoản'),
+            loadError: FailurePresenter.of(failure, context: 'account'),
           ),
         );
       case Ok<List<BankAccount>>(:final value):

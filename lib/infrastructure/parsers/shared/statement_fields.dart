@@ -235,12 +235,12 @@ abstract final class StatementFields {
   static DateTime parseDate(String? raw) {
     final value = raw?.trim();
     if (value == null || value.isEmpty) {
-      throw const StatementFieldException('Thiếu ngày giao dịch.');
+      throw const StatementFieldException('The transaction date is missing.');
     }
 
     final match = _datePattern.firstMatch(value);
     if (match == null) {
-      throw StatementFieldException('Không đọc được ngày "$value".');
+      throw StatementFieldException('Could not read the date "$value".');
     }
 
     final first = int.parse(match.group(1)!);
@@ -392,7 +392,7 @@ abstract final class StatementFields {
   static String _canonicalDecimal(String? raw) {
     var value = raw?.trim() ?? '';
     if (value.isEmpty) {
-      throw const StatementFieldException('Thiếu số tiền.');
+      throw const StatementFieldException('The amount is missing.');
     }
 
     var negative = false;
@@ -421,7 +421,7 @@ abstract final class StatementFields {
 
     value = value.replaceAll(_nonNumericPattern, '');
     if (value.isEmpty) {
-      throw StatementFieldException('Không đọc được số tiền "$raw".');
+      throw StatementFieldException('Could not read the amount "$raw".');
     }
 
     final lastDot = value.lastIndexOf('.');
@@ -441,7 +441,7 @@ abstract final class StatementFields {
     }
 
     if (!_digitsPattern.hasMatch(digits)) {
-      throw StatementFieldException('Không đọc được số tiền "$raw".');
+      throw StatementFieldException('Could not read the amount "$raw".');
     }
     return negative ? '-$digits' : digits;
   }
@@ -453,14 +453,14 @@ abstract final class StatementFields {
     required String raw,
   }) {
     if (month < 1 || month > 12 || day < 1 || day > 31) {
-      throw StatementFieldException('Ngày "$raw" không hợp lệ.');
+      throw StatementFieldException('The date "$raw" is not valid.');
     }
     final date = DateTime.utc(year, month, day);
     // `DateTime.utc` tự trượt sang tháng sau với ngày 31 của tháng chỉ có 30
     // ngày. Trượt trong im lặng là đúng thứ không được phép ở đây: nó tạo ra một
     // giao dịch có thật ở sai ngày.
     if (date.year != year || date.month != month || date.day != day) {
-      throw StatementFieldException('Ngày "$raw" không tồn tại.');
+      throw StatementFieldException('The date "$raw" does not exist.');
     }
     return date;
   }

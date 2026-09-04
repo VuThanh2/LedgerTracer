@@ -146,7 +146,8 @@ final class ReconciliationState {
 
   /// Đối soát cần hai tài khoản khác nhau để có gì mà ghép (UC-08).
   bool get canRun =>
-      accountsWithTransactions >= AccountActivity.minimumAccountsForReconciliation;
+      accountsWithTransactions >=
+      AccountActivity.minimumAccountsForReconciliation;
 
   bool get isRunning =>
       runPhase == ReconciliationRunPhase.running ||
@@ -195,8 +196,7 @@ final class ReconciliationState {
     pendingCount: pendingCount ?? this.pendingCount,
     confirmedCount: confirmedCount ?? this.confirmedCount,
     rejectedCount: rejectedCount ?? this.rejectedCount,
-    rejectedCountIsCapped:
-        rejectedCountIsCapped ?? this.rejectedCountIsCapped,
+    rejectedCountIsCapped: rejectedCountIsCapped ?? this.rejectedCountIsCapped,
     pairs: pairs ?? this.pairs,
     rejected: rejected ?? this.rejected,
     hasMore: hasMore ?? this.hasMore,

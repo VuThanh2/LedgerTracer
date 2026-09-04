@@ -54,14 +54,26 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
        super(const ImportState()) {
     on<ImportStarted>(_onStarted, transformer: EventTransformers.restartable());
     // Hộp thoại chọn file của nền tảng không được mở hai lần chồng nhau.
-    on<ImportFilesPickRequested>(_onPickRequested, transformer: EventTransformers.droppable());
+    on<ImportFilesPickRequested>(
+      _onPickRequested,
+      transformer: EventTransformers.droppable(),
+    );
     on<ImportFileRemoved>(_onFileRemoved);
-    on<ImportFileAccountAssigned>(_onAccountAssigned, transformer: EventTransformers.sequential());
-    on<ImportAccountCreated>(_onAccountCreated, transformer: EventTransformers.sequential());
+    on<ImportFileAccountAssigned>(
+      _onAccountAssigned,
+      transformer: EventTransformers.sequential(),
+    );
+    on<ImportAccountCreated>(
+      _onAccountCreated,
+      transformer: EventTransformers.sequential(),
+    );
     on<ImportMismatchResolved>(_onMismatchResolved);
     on<ImportStepAdvanced>(_onStepAdvanced);
     on<ImportStepReverted>(_onStepReverted);
-    on<ImportRunRequested>(_onRunRequested, transformer: EventTransformers.droppable());
+    on<ImportRunRequested>(
+      _onRunRequested,
+      transformer: EventTransformers.droppable(),
+    );
     on<ImportRunCancelled>(_onRunCancelled);
     on<ImportReset>(_onReset);
   }
@@ -110,9 +122,7 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
       emit(
         state.copyWith(
           isPicking: false,
-          notice: _notices.danger(
-            'Không mở được hộp thoại chọn file: $error',
-          ),
+          notice: _notices.danger('Could not open the file picker: $error'),
         ),
       );
       return;
@@ -130,22 +140,23 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
         emit(
           state.copyWith(
             isPicking: false,
-            notice: _noticeOf(failure, 'file sao kê'),
+            notice: _noticeOf(failure, 'statement file'),
           ),
         );
       case Ok<List<InspectedFile>>(:final value):
         // Chọn thêm thì **cộng dồn** chứ không thay thế: chọn nhiều lần là cách
         // duy nhất gom file từ nhiều thư mục vào cùng một lượt, và trên Web thì
         // hộp thoại của trình duyệt cũng chỉ mở được một thư mục mỗi lần.
-        final existing = <String>{for (final file in state.files) file.fileName};
+        final existing = <String>{
+          for (final file in state.files) file.fileName,
+        };
         emit(
           state.copyWith(
             isPicking: false,
             files: <ImportFileEntry>[
               ...state.files,
               for (final file in value)
-                if (!existing.contains(file.fileName))
-                  ImportFileEntry.of(file),
+                if (!existing.contains(file.fileName)) ImportFileEntry.of(file),
             ],
           ),
         );
@@ -178,7 +189,7 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
     );
     switch (check) {
       case Err<AccountAssignmentCheck>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'tài khoản')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'account')));
       case Ok<AccountAssignmentCheck>(:final value):
         emit(
           state.copyWith(
@@ -204,12 +215,12 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
     final created = await _accounts.add(event.displayName);
     switch (created) {
       case Err<BankAccount>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'tài khoản')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'account')));
       case Ok<BankAccount>(:final value):
         emit(
           state.copyWith(
             accounts: <BankAccount>[...state.accounts, value],
-            notice: _notices.success('Đã tạo tài khoản "${value.displayName}".'),
+            notice: _notices.success('Account "${value.displayName}" created.'),
           ),
         );
         final fileName = event.assignToFileName;
@@ -314,7 +325,7 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
             step: ImportStep.pickFiles,
             isCancelling: false,
             clearProgress: true,
-            error: FailurePresenter.of(failure, context: 'lượt nhập'),
+            error: FailurePresenter.of(failure, context: 'import run'),
           ),
         );
       case Ok<ImportSummary>(:final value):

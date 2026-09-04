@@ -84,7 +84,7 @@ final class Mt940Parser implements StatementParser {
       // Cả **file** không dùng được: không có trường `:61:` nào thì đây không
       // phải một sao kê MT940, dù phần đầu có trông giống đến đâu (UC-02).
       throw const FormatException(
-        'File MT940 không chứa dòng giao dịch (:61:) nào.',
+        'The MT940 file holds no transaction line (:61:).',
       );
     }
   }
@@ -129,7 +129,7 @@ final class Mt940Parser implements StatementParser {
         ParseError(
           sourceLineNumber: field.lineNumber,
           rawLine: field.value,
-          reason: 'Dòng :61: không đúng cấu trúc MT940.',
+          reason: 'This :61: line does not follow the MT940 structure.',
         ),
       );
     }

@@ -242,7 +242,7 @@ void main() {
         chips: <FilterChipViewModel>[],
       );
       expect(source.hasUnexportableContext, isFalse);
-      expect(source.criteriaLines, <String>['Không áp dụng bộ lọc nào.']);
+      expect(source.criteriaLines, <String>['No filter applied.']);
     });
   });
 }

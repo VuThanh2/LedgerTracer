@@ -366,7 +366,7 @@ void main() {
       expect(summary.files[1].importedCount, 1);
 
       final errors = await db.imports.findErrorRows(summary.files[0].recordId);
-      expect(errors.single.reason, contains('Không đọc được file'));
+      expect(errors.single.reason, contains('Could not read the file'));
     });
   });
 

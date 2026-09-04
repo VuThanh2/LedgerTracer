@@ -28,16 +28,28 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
   }) : _lock = appLock,
        _reset = resetApp,
        super(const AppLockState()) {
-    on<AppLockChecked>(_onChecked, transformer: EventTransformers.restartable());
+    on<AppLockChecked>(
+      _onChecked,
+      transformer: EventTransformers.restartable(),
+    );
     // Tuần tự: một mã PIN đang được kiểm là một phép băm chậm có chủ đích, và
     // hai lần kiểm chồng nhau chỉ làm nó chậm gấp đôi.
-    on<AppLockPinSubmitted>(_onPinSubmitted, transformer: EventTransformers.sequential());
+    on<AppLockPinSubmitted>(
+      _onPinSubmitted,
+      transformer: EventTransformers.sequential(),
+    );
     // Hộp thoại sinh trắc học của hệ điều hành không được mở hai lần chồng nhau.
-    on<AppLockBiometricRequested>(_onBiometricRequested, transformer: EventTransformers.droppable());
+    on<AppLockBiometricRequested>(
+      _onBiometricRequested,
+      transformer: EventTransformers.droppable(),
+    );
     on<AppLockResetRequested>(_onResetRequested);
     on<AppLockResetDismissed>(_onResetDismissed);
     on<AppLockResetConfirmationTyped>(_onResetConfirmationTyped);
-    on<AppLockResetConfirmed>(_onResetConfirmed, transformer: EventTransformers.droppable());
+    on<AppLockResetConfirmed>(
+      _onResetConfirmed,
+      transformer: EventTransformers.droppable(),
+    );
   }
 
   final AppLockUseCase _lock;
@@ -59,7 +71,7 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
           state.copyWith(
             status: LoadStatus.failed,
             gate: AppLockGate.locked,
-            error: FailurePresenter.of(failure, context: 'thiết lập bảo mật'),
+            error: FailurePresenter.of(failure, context: 'security settings'),
           ),
         );
       case Ok<AppLockStatus>(:final value):
@@ -89,7 +101,7 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
         emit(
           state.copyWith(
             isVerifying: false,
-            pinError: FailurePresenter.of(failure, context: 'mã PIN').text,
+            pinError: FailurePresenter.of(failure, context: 'PIN').text,
           ),
         );
       case Ok<bool>(value: final unlocked):
@@ -100,7 +112,7 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
             // Câu chữ không nói bí mật sai ở chỗ nào, và không đếm số lần sai:
             // đây là thiết bị của chính người dùng, không phải một dịch vụ cần
             // chống dò mật khẩu từ xa.
-            pinError: unlocked ? null : 'Mã PIN không đúng.',
+            pinError: unlocked ? null : 'That PIN is not right.',
             clearPinError: unlocked,
           ),
         );
@@ -120,7 +132,7 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
         emit(
           state.copyWith(
             isVerifying: false,
-            error: FailurePresenter.of(failure, context: 'sinh trắc học'),
+            error: FailurePresenter.of(failure, context: 'biometrics'),
           ),
         );
       case Ok<bool>(value: final unlocked):
@@ -133,7 +145,7 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
             error: unlocked
                 ? null
                 : const FeedbackMessage.info(
-                    'Không nhận được sinh trắc học. Hãy nhập mã PIN.',
+                    'Biometrics did not go through. Enter your PIN instead.',
                   ),
             clearError: unlocked,
           ),
@@ -179,7 +191,7 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
         emit(
           state.copyWith(
             isResetting: false,
-            error: FailurePresenter.of(failure, context: 'dữ liệu cục bộ'),
+            error: FailurePresenter.of(failure, context: 'local data'),
           ),
         );
       case Ok<void>():
@@ -191,8 +203,8 @@ final class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
             status: LoadStatus.ready,
             gate: AppLockGate.unlocked,
             error: FeedbackMessage.warning(
-              'Đã xoá toàn bộ dữ liệu cục bộ. Khôi phục từ bản sao lưu nếu bạn '
-              'có, ở Thiết lập › Dữ liệu.',
+              'All local data was deleted. Restore from a backup file, if you '
+              'have one, under Settings › Data.',
             ),
           ),
         );

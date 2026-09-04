@@ -90,10 +90,10 @@ final class ImportFileRecordViewModel {
   );
 
   static String _labelOf(ImportFileStatus status) => switch (status) {
-    ImportFileStatus.completed => 'Hoàn tất',
-    ImportFileStatus.partiallyFailed => 'Có dòng lỗi',
-    ImportFileStatus.cancelled => 'Đã dừng',
-    ImportFileStatus.skipped => 'Đã bỏ qua',
+    ImportFileStatus.completed => 'Committed',
+    ImportFileStatus.partiallyFailed => 'Has error rows',
+    ImportFileStatus.cancelled => 'Cancelled',
+    ImportFileStatus.skipped => 'Skipped',
   };
 }
 
@@ -154,20 +154,20 @@ final class ImportSessionViewModel {
   final bool isFullyReverted;
 
   static String _labelOf(ImportSessionStatus status) => switch (status) {
-    ImportSessionStatus.inProgress => 'Đang chạy',
-    ImportSessionStatus.completed => 'Hoàn tất',
-    ImportSessionStatus.cancelled => 'Đã dừng',
-    ImportSessionStatus.interrupted => 'Bị gián đoạn',
+    ImportSessionStatus.inProgress => 'Running',
+    ImportSessionStatus.completed => 'Committed',
+    ImportSessionStatus.cancelled => 'Cancelled',
+    ImportSessionStatus.interrupted => 'Interrupted',
   };
 
   static String _noteOf(ImportSessionStatus status) => switch (status) {
     ImportSessionStatus.cancelled =>
-      'Bạn đã dừng lượt này. Phần đã ghi được giữ lại; nhập lại đúng những file '
-          'đó sẽ chỉ bổ sung phần còn thiếu.',
+      'You cancelled this run. Committed rows are kept; importing those same '
+          'files again only fills in what is missing.',
     ImportSessionStatus.interrupted =>
-      'Ứng dụng bị đóng giữa chừng nên lượt này không kịp hoàn tất. Phần đã ghi '
-          'được giữ lại; nhập lại đúng những file đó sẽ chỉ bổ sung phần còn '
-          'thiếu.',
+      'The app closed midway, so this run never finished. Committed rows are '
+          'kept; importing those same files again only fills in what is '
+          'missing.',
     ImportSessionStatus.inProgress || ImportSessionStatus.completed => '',
   };
 }

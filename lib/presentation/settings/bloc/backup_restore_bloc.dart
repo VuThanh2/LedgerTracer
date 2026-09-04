@@ -32,12 +32,24 @@ final class BackupRestoreBloc
        super(const BackupRestoreState()) {
     on<BackupRestoreStarted>(_onStarted);
     on<BackupPasswordChanged>(_onBackupPasswordChanged);
-    on<BackupRequested>(_onBackupRequested, transformer: EventTransformers.droppable());
-    on<RestoreFilePicked>(_onFilePicked, transformer: EventTransformers.droppable());
+    on<BackupRequested>(
+      _onBackupRequested,
+      transformer: EventTransformers.droppable(),
+    );
+    on<RestoreFilePicked>(
+      _onFilePicked,
+      transformer: EventTransformers.droppable(),
+    );
     on<RestorePasswordChanged>(_onRestorePasswordChanged);
-    on<RestorePrepared>(_onRestorePrepared, transformer: EventTransformers.droppable());
+    on<RestorePrepared>(
+      _onRestorePrepared,
+      transformer: EventTransformers.droppable(),
+    );
     on<RestoreDismissed>(_onRestoreDismissed);
-    on<RestoreCommitted>(_onRestoreCommitted, transformer: EventTransformers.droppable());
+    on<RestoreCommitted>(
+      _onRestoreCommitted,
+      transformer: EventTransformers.droppable(),
+    );
   }
 
   final BackupRestoreUseCase _useCase;
@@ -90,7 +102,7 @@ final class BackupRestoreBloc
           state.copyWith(
             isBackingUp: false,
             notice: _notices.of(
-              FailurePresenter.of(failure, context: 'bản sao lưu'),
+              FailurePresenter.of(failure, context: 'backup'),
             ),
           ),
         );
@@ -102,8 +114,8 @@ final class BackupRestoreBloc
             // Mất mật khẩu là mất luôn file — nhắc lại sau khi lưu, vì đây là
             // lúc người dùng còn nhớ mình vừa đặt cái gì.
             notice: _notices.success(
-              'Đã tạo bản sao lưu. Không có mật khẩu này thì không mở lại được '
-              'file đó bằng bất kỳ cách nào.',
+              'Backup created. Without that password the file cannot be opened '
+              'again by any means.',
             ),
           ),
         );
@@ -120,7 +132,7 @@ final class BackupRestoreBloc
     } on Object catch (error) {
       emit(
         state.copyWith(
-          notice: _notices.danger('Không mở được hộp thoại chọn file: $error'),
+          notice: _notices.danger('Could not open the file picker: $error'),
         ),
       );
       return;
@@ -142,10 +154,7 @@ final class BackupRestoreBloc
     RestorePasswordChanged event,
     Emitter<BackupRestoreState> emit,
   ) => emit(
-    state.copyWith(
-      restorePassword: event.password,
-      clearRestoreError: true,
-    ),
+    state.copyWith(restorePassword: event.password, clearRestoreError: true),
   );
 
   Future<void> _onRestorePrepared(
@@ -165,10 +174,7 @@ final class BackupRestoreBloc
         emit(
           state.copyWith(
             isPreparing: false,
-            restoreError: FailurePresenter.of(
-              failure,
-              context: 'file sao lưu',
-            ),
+            restoreError: FailurePresenter.of(failure, context: 'backup file'),
           ),
         );
       case Ok<RestorePlan>(:final value):
@@ -204,7 +210,7 @@ final class BackupRestoreBloc
         emit(
           state.copyWith(
             isRestoring: false,
-            restoreError: FailurePresenter.of(failure, context: 'bản sao lưu'),
+            restoreError: FailurePresenter.of(failure, context: 'backup'),
           ),
         );
       case Ok<void>():
@@ -219,7 +225,7 @@ final class BackupRestoreBloc
             clearManifest: true,
             restorePassword: '',
             notice: _notices.success(
-              'Đã khôi phục xong. Toàn bộ dữ liệu trước đó đã được thay thế.',
+              'Restore finished. Everything that was here before is replaced.',
             ),
           ),
         );
@@ -227,9 +233,9 @@ final class BackupRestoreBloc
   }
 
   String? _backupPasswordError() {
-    if (state.backupPassword.isEmpty) return 'Đặt mật khẩu cho file sao lưu.';
+    if (state.backupPassword.isEmpty) return 'Set a password for the file.';
     if (state.backupPassword != state.backupPasswordConfirm) {
-      return 'Hai ô mật khẩu không khớp nhau.';
+      return 'The two passwords do not match.';
     }
     return null;
   }
@@ -240,6 +246,6 @@ final class BackupRestoreBloc
   /// tải xuống thay vì đọc ra một đường dẫn không tồn tại (UC-13).
   String _locationTextOf(BackupLocation location) =>
       location.viaBrowserDownload || location.path == null
-      ? 'Đã tải xuống qua trình duyệt.'
-      : 'Đã lưu vào ${location.path}';
+      ? 'Downloaded through the browser.'
+      : 'Saved to ${location.path}';
 }

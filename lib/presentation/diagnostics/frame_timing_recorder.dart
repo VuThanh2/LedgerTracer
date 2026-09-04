@@ -61,8 +61,7 @@ final class FrameTimingRecorder {
   /// Ngân sách một khung hình ở 60Hz.
   static const double frameBudgetMillis = 1000 / 60;
 
-  SchedulerBinding? get _scheduler =>
-      binding ?? SchedulerBinding.instance;
+  SchedulerBinding? get _scheduler => binding ?? SchedulerBinding.instance;
 
   void start() {
     if (_isRecording) return;

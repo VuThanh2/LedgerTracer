@@ -95,7 +95,8 @@ final class CsvParser implements StatementParser {
       // tiền. Ném ra ở đây để tầng trên báo `ParsingFailure` cho riêng file này
       // (UC-02).
       throw const FormatException(
-        'Không tìm thấy dòng tiêu đề có cột ngày và số tiền trong file CSV.',
+        'No header row with a date column and an amount column was found in the '
+      'CSV file.',
       );
     }
   }

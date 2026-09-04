@@ -88,8 +88,7 @@ final class BackupRestoreState {
     TransientNotice? notice,
   }) => BackupRestoreState(
     backupPassword: backupPassword ?? this.backupPassword,
-    backupPasswordConfirm:
-        backupPasswordConfirm ?? this.backupPasswordConfirm,
+    backupPasswordConfirm: backupPasswordConfirm ?? this.backupPasswordConfirm,
     isBackingUp: isBackingUp ?? this.isBackingUp,
     backupPasswordError: clearBackupPasswordError
         ? null
@@ -98,7 +97,9 @@ final class BackupRestoreState {
     pickedFileName: pickedFileName ?? this.pickedFileName,
     restorePassword: restorePassword ?? this.restorePassword,
     isPreparing: isPreparing ?? this.isPreparing,
-    restoreError: clearRestoreError ? null : (restoreError ?? this.restoreError),
+    restoreError: clearRestoreError
+        ? null
+        : (restoreError ?? this.restoreError),
     manifest: clearManifest ? null : (manifest ?? this.manifest),
     isRestoring: isRestoring ?? this.isRestoring,
     isRestored: isRestored ?? this.isRestored,

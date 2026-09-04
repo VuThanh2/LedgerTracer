@@ -266,7 +266,7 @@ final class ImportStatementsUseCase {
             recordId: record.recordId!,
             sourceLineNumber: 0,
             rawLine: item.file.fileName,
-            reason: 'Không đọc được file: ${outcome.error}',
+            reason: 'Could not read the file: ${outcome.error}',
           ),
         ]);
         record = record.accumulate(errorRowCount: 1);

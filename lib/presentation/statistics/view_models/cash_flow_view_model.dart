@@ -78,8 +78,10 @@ final class CashFlowChartViewModel {
           // Kiểu tổng đóng nên nhãn lấy được mà không cần một dấu `!` nào: một
           // cột hoặc thuộc một mốc thời gian, hoặc thuộc một tài khoản.
           label: switch (bucket) {
-            PeriodCashFlow(:final periodStart) =>
-              DateFormatter.period(periodStart, period),
+            PeriodCashFlow(:final periodStart) => DateFormatter.period(
+              periodStart,
+              period,
+            ),
             AccountCashFlow(:final accountId) =>
               series.accountNames[accountId] ?? '',
           },

@@ -55,11 +55,11 @@ final class ExportTransactionsSource extends ExportSource {
   final List<FilterChipViewModel> chips;
 
   @override
-  String get title => 'Xuất danh sách giao dịch';
+  String get title => 'Export transactions';
 
   @override
   List<String> get criteriaLines => chips.isEmpty
-      ? const <String>['Không áp dụng bộ lọc nào.']
+      ? const <String>['No filter applied.']
       : <String>[for (final chip in chips) chip.label];
 
   /// Bộ lọc gửi xuống use case, đã được ngữ cảnh thu hẹp bằng những tiêu chí
@@ -86,9 +86,8 @@ final class ExportTransactionsSource extends ExportSource {
   /// phần đầu file tự đúng, và toàn bộ ghi chú này biến mất.
   @override
   List<String> get unexportableContextLines => <String>[
-    if (context.filtersByImport)
-      'Lượt nhập: ${context.importFileName ?? ''}',
-    if (context.excludeInternalTransfers) 'Không gồm chuyển khoản nội bộ',
+    if (context.filtersByImport) 'Import: ${context.importFileName ?? ''}',
+    if (context.excludeInternalTransfers) 'Excluding internal transfers',
   ];
 }
 
@@ -102,12 +101,10 @@ final class ExportReconciliationSource extends ExportSource {
   final String? groupLabel;
 
   @override
-  String get title => 'Xuất kết quả đối soát';
+  String get title => 'Export reconciliation results';
 
   @override
-  List<String> get criteriaLines => <String>[
-    'Nhóm: ${groupLabel ?? 'tất cả'}',
-  ];
+  List<String> get criteriaLines => <String>['Group: ${groupLabel ?? 'all'}'];
 
   @override
   ExportRequest toRequest(ExportFormat format) =>
@@ -134,16 +131,16 @@ final class ExportStatisticsSource extends ExportSource {
   final bool excludeInternalTransfers;
 
   @override
-  String get title => 'Xuất số liệu thống kê';
+  String get title => 'Export statistics';
 
   @override
   List<String> get criteriaLines => <String>[
-    'Loại tiền: ${currency.code}',
-    'Gom nhóm theo: '
-        '${grouping == CashFlowGrouping.byAccount ? 'tài khoản' : period.name}',
-    if (dateRange != null) 'Khoảng ngày: $dateRange',
-    'Loại trừ giao dịch nội bộ đã đối soát: '
-        '${excludeInternalTransfers ? 'có' : 'không'}',
+    'Currency: ${currency.code}',
+    'Grouped by: '
+        '${grouping == CashFlowGrouping.byAccount ? 'account' : period.name}',
+    if (dateRange != null) 'Date range: $dateRange',
+    'Excluding confirmed internal transfers: '
+        '${excludeInternalTransfers ? 'yes' : 'no'}',
   ];
 
   @override
@@ -171,14 +168,12 @@ final class ExportErrorRowsSource extends ExportSource {
   final String fileName;
 
   @override
-  String get title => 'Xuất danh sách dòng lỗi';
+  String get title => 'Export error rows';
 
   @override
   List<String> get criteriaLines => <String>['File: $fileName'];
 
   @override
-  ExportRequest toRequest(ExportFormat format) => ExportErrorRows(
-    importFileRecordId: importFileRecordId,
-    format: format,
-  );
+  ExportRequest toRequest(ExportFormat format) =>
+      ExportErrorRows(importFileRecordId: importFileRecordId, format: format);
 }

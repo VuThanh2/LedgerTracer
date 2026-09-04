@@ -113,7 +113,7 @@ void main() {
           ),
         ),
       );
-      expect(contentOf(result.valueOrNull!), contains('không được mã hoá'));
+      expect(contentOf(result.valueOrNull!), contains('not encrypted'));
     });
 
     test('phản ánh đúng bộ lọc đang áp dụng, và ghi tiêu chí ở đầu file', () async {
@@ -139,8 +139,8 @@ void main() {
 
       expect(result.valueOrNull!.rowCount, 1);
       final content = contentOf(result.valueOrNull!);
-      expect(content, contains('Từ khoá'));
-      expect(content, contains('Khoảng ngày'));
+      expect(content, contains('Keyword'));
+      expect(content, contains('Date range'));
     });
 
     test('nói rõ khi không có bộ lọc nào', () async {
@@ -155,7 +155,7 @@ void main() {
       );
       expect(
         contentOf(result.valueOrNull!),
-        contains('Không áp dụng bộ lọc nào'),
+        contains('No filter applied'),
       );
     });
 
@@ -236,8 +236,8 @@ void main() {
         ),
       );
       final content = contentOf(result.valueOrNull!);
-      expect(content, contains('Loại tiền: VND'));
-      expect(content, contains('Loại trừ giao dịch nội bộ đã đối soát: có'));
+      expect(content, contains('Currency: VND'));
+      expect(content, contains('Excluding confirmed internal transfers: yes'));
     });
 
     test('xuất thống kê theo tài khoản dùng tên tài khoản làm nhãn cột', () async {
@@ -283,7 +283,7 @@ void main() {
 
       expect(result.valueOrNull!.rowCount, 2);
       final content = contentOf(result.valueOrNull!);
-      expect(content, contains('Dòng gốc'));
+      expect(content, contains('Source row'));
       expect(content, contains('42;Ngày không hợp lệ'));
       expect(content, contains('7;Thiếu số tiền'));
       // Tên file gốc nằm ở phần đầu để người dùng biết sửa file nào.

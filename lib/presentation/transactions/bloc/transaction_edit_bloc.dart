@@ -45,22 +45,36 @@ final class TransactionEditBloc
       transformer: EventTransformers.restartable(),
     );
     on<TransactionEditDateChanged>(
-      (event, emit) => _mutate(emit, (draft) => draft.copyWith(bookingDate: event.bookingDate)),
+      (event, emit) => _mutate(
+        emit,
+        (draft) => draft.copyWith(bookingDate: event.bookingDate),
+      ),
     );
     on<TransactionEditAmountChanged>(
-      (event, emit) => _mutate(emit, (draft) => draft.copyWith(amountText: event.amountText)),
+      (event, emit) => _mutate(
+        emit,
+        (draft) => draft.copyWith(amountText: event.amountText),
+      ),
     );
     on<TransactionEditDirectionChanged>(
-      (event, emit) => _mutate(emit, (draft) => draft.copyWith(direction: event.direction)),
+      (event, emit) =>
+          _mutate(emit, (draft) => draft.copyWith(direction: event.direction)),
     );
     on<TransactionEditCurrencyChanged>(
-      (event, emit) => _mutate(emit, (draft) => draft.copyWith(currency: event.currency)),
+      (event, emit) =>
+          _mutate(emit, (draft) => draft.copyWith(currency: event.currency)),
     );
     on<TransactionEditCounterpartyChanged>(
-      (event, emit) => _mutate(emit, (draft) => draft.copyWith(counterpartyName: event.counterpartyName)),
+      (event, emit) => _mutate(
+        emit,
+        (draft) => draft.copyWith(counterpartyName: event.counterpartyName),
+      ),
     );
     on<TransactionEditDescriptionChanged>(
-      (event, emit) => _mutate(emit, (draft) => draft.copyWith(description: event.description)),
+      (event, emit) => _mutate(
+        emit,
+        (draft) => draft.copyWith(description: event.description),
+      ),
     );
     // Tuần tự: hai lần bấm lưu liên tiếp không được thành hai lần ghi.
     on<TransactionEditSubmitted>(
@@ -89,17 +103,14 @@ final class TransactionEditBloc
         emit(
           state.copyWith(
             status: LoadStatus.failed,
-            error: FailurePresenter.of(failure, context: 'giao dịch'),
+            error: FailurePresenter.of(failure, context: 'transaction'),
           ),
         );
         return;
       case Ok<Transaction?>(value: final tx):
         if (tx == null) {
           emit(
-            state.copyWith(
-              status: LoadStatus.failed,
-              error: _transactionGone,
-            ),
+            state.copyWith(status: LoadStatus.failed, error: _transactionGone),
           );
           return;
         }
@@ -154,14 +165,20 @@ final class TransactionEditBloc
       return;
     }
 
-    emit(state.copyWith(isSubmitting: true, clearError: true, clearValidation: true));
+    emit(
+      state.copyWith(
+        isSubmitting: true,
+        clearError: true,
+        clearValidation: true,
+      ),
+    );
     final result = await _edit.execute(validation.request!);
     switch (result) {
       case Err<EditTransactionResult>(:final failure):
         emit(
           state.copyWith(
             isSubmitting: false,
-            error: FailurePresenter.of(failure, context: 'giao dịch'),
+            error: FailurePresenter.of(failure, context: 'transaction'),
           ),
         );
       case Ok<EditTransactionResult>(:final value):
@@ -194,6 +211,6 @@ final class TransactionEditBloc
 /// đọc, không phải một thất bại. Câu chữ vẫn phải trùng ý với nhánh
 /// `NotFoundFailure`: thứ người dùng cần làm là như nhau.
 const FeedbackMessage _transactionGone = FeedbackMessage.warning(
-  'Giao dịch này không còn tồn tại. Có thể nó đã bị xoá, hoặc lượt nhập chứa '
-  'nó đã được hoàn tác.',
+  'This transaction no longer exists. It may have been deleted, or the import '
+  'run that created it was reverted.',
 );

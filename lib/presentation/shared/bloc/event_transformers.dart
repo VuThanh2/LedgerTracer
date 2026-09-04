@@ -25,7 +25,8 @@ abstract final class EventTransformers {
   /// chậm của từ khoá cũ có thể về sau và ghi đè kết quả của từ khoá mới.
   static EventTransformer<E> searchInput<E>([
     Duration duration = defaultDebounce,
-  ]) => (events, mapper) => _switchMap(_debounce(events, duration), mapper);
+  ]) =>
+      (events, mapper) => _switchMap(_debounce(events, duration), mapper);
 
   /// Huỷ lượt đang chạy khi có sự kiện mới, không chờ đợi gì.
   ///

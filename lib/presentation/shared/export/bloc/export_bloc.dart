@@ -24,7 +24,10 @@ final class ExportBloc extends Bloc<ExportEvent, ExportState> {
       super(const ExportState()) {
     on<ExportOpened>(_onOpened);
     on<ExportFormatSelected>(_onFormatSelected);
-    on<ExportRequested>(_onRequested, transformer: EventTransformers.droppable());
+    on<ExportRequested>(
+      _onRequested,
+      transformer: EventTransformers.droppable(),
+    );
     on<ExportCancelled>(_onCancelled);
     on<ExportDismissed>(_onDismissed);
   }
@@ -91,7 +94,7 @@ final class ExportBloc extends Bloc<ExportEvent, ExportState> {
     _cancellation = null;
     switch (result) {
       case Err<ExportResult>(:final failure):
-        final message = FailurePresenter.of(failure, context: 'dữ liệu xuất');
+        final message = FailurePresenter.of(failure, context: 'export');
         emit(
           state.copyWith(
             isRunning: false,
@@ -134,6 +137,6 @@ final class ExportBloc extends Bloc<ExportEvent, ExportState> {
   /// xuống thay vì đọc ra một đường dẫn không tồn tại (UC-11).
   String _locationTextOf(SavedFile file) =>
       file.viaBrowserDownload || file.path == null
-      ? 'Đã tải xuống qua trình duyệt.'
-      : 'Đã lưu vào ${file.path}';
+      ? 'Downloaded through the browser.'
+      : 'Saved to ${file.path}';
 }

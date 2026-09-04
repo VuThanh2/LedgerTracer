@@ -110,7 +110,7 @@ final class TransactionFilterDraft {
     final to = dateTo;
     if (from != null && to != null) {
       if (DateRange.dateOnly(from).isAfter(DateRange.dateOnly(to))) {
-        dateError = 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.';
+        dateError = 'The start date must be on or before the end date.';
       } else {
         dateRange = DateRange(from: from, to: to);
       }
@@ -124,7 +124,7 @@ final class TransactionFilterDraft {
 
     String? currencyError;
     if ((hasAmountCriteria || filterByCurrency) && currency == null) {
-      currencyError = 'Chọn loại tiền.';
+      currencyError = 'Pick a currency.';
     }
 
     final min = _parseAmount(minAmountText);
@@ -139,7 +139,7 @@ final class TransactionFilterDraft {
       amountRange = _buildRange(min.value, max.value);
       if (amountRange == null) {
         rangeError =
-            'Số tiền nhỏ nhất phải nhỏ hơn hoặc bằng số tiền lớn nhất.';
+            'The lowest amount must be less than or equal to the highest.';
       }
     }
 
@@ -194,16 +194,16 @@ final class TransactionFilterDraft {
     if (selected == null) return const _ParsedAmount(null, null);
 
     final decimal = NumberFormatter.toDecimalInput(trimmed);
-    if (decimal == null) return const _ParsedAmount(null, 'Không phải một số.');
+    if (decimal == null) return const _ParsedAmount(null, 'Not a number.');
     try {
       return _ParsedAmount(Money.fromDecimalString(decimal, selected), null);
     } on AmountPrecisionError {
       return _ParsedAmount(
         null,
-        '${selected.code} không có tới từng ấy chữ số thập phân.',
+        '${selected.code} does not have that many decimal places.',
       );
     } on MalformedAmountError {
-      return const _ParsedAmount(null, 'Không phải một số.');
+      return const _ParsedAmount(null, 'Not a number.');
     }
   }
 

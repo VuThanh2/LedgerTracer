@@ -85,7 +85,8 @@ abstract final class TabularStatement {
       // này không nói được nó vào hay ra, và đoán bừa sẽ ghi vào cơ sở dữ liệu
       // một con số sai mà không ai biết.
       throw const StatementFieldException(
-        'Dòng có cả ghi nợ lẫn ghi có nên không xác định được chiều tiền.',
+        'The row carries both a debit and a credit, so the direction of the '
+      'money is undecidable.',
       );
     }
     if (hasOutgoing) return outgoing;

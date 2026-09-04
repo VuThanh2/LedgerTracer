@@ -27,11 +27,26 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   SettingsBloc({required AppLockUseCase appLock, this.hiddenTapsRequired = 7})
     : _lock = appLock,
       super(const SettingsState()) {
-    on<SettingsStarted>(_onStarted, transformer: EventTransformers.restartable());
-    on<SettingsLockEnabled>(_onLockEnabled, transformer: EventTransformers.sequential());
-    on<SettingsLockDisabled>(_onLockDisabled, transformer: EventTransformers.sequential());
-    on<SettingsPinChanged>(_onPinChanged, transformer: EventTransformers.sequential());
-    on<SettingsBiometricToggled>(_onBiometricToggled, transformer: EventTransformers.sequential());
+    on<SettingsStarted>(
+      _onStarted,
+      transformer: EventTransformers.restartable(),
+    );
+    on<SettingsLockEnabled>(
+      _onLockEnabled,
+      transformer: EventTransformers.sequential(),
+    );
+    on<SettingsLockDisabled>(
+      _onLockDisabled,
+      transformer: EventTransformers.sequential(),
+    );
+    on<SettingsPinChanged>(
+      _onPinChanged,
+      transformer: EventTransformers.sequential(),
+    );
+    on<SettingsBiometricToggled>(
+      _onBiometricToggled,
+      transformer: EventTransformers.sequential(),
+    );
     on<SettingsHiddenEntryTapped>(_onHiddenTapped);
   }
 
@@ -65,8 +80,8 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit,
       result,
       successText:
-          'Đã bật khoá ứng dụng. Quên mã PIN thì lối ra duy nhất là xoá toàn bộ '
-          'dữ liệu cục bộ, nên hãy sao lưu trước.',
+          'App lock is on. If you forget the PIN the only way back in is to '
+          'delete all local data, so make a backup first.',
     );
   }
 
@@ -76,11 +91,7 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     emit(state.copyWith(isSubmitting: true, clearPinError: true));
     final result = await _lock.disableLock(event.currentPin);
-    await _finishPinOperation(
-      emit,
-      result,
-      successText: 'Đã tắt khoá ứng dụng.',
-    );
+    await _finishPinOperation(emit, result, successText: 'App lock is off.');
   }
 
   Future<void> _onPinChanged(
@@ -98,7 +109,7 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       currentPin: event.currentPin,
       newPin: event.newPin,
     );
-    await _finishPinOperation(emit, result, successText: 'Đã đổi mã PIN.');
+    await _finishPinOperation(emit, result, successText: 'PIN updated.');
   }
 
   Future<void> _onBiometricToggled(
@@ -112,7 +123,7 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         emit(
           state.copyWith(
             isSubmitting: false,
-            notice: _noticeOf(failure, 'thiết lập bảo mật'),
+            notice: _noticeOf(failure, 'security settings'),
           ),
         );
       case Ok<void>():
@@ -121,9 +132,9 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
             isSubmitting: false,
             notice: _notices.success(
               event.enabled
-                  ? 'Đã bật mở khoá bằng sinh trắc học. Mã PIN vẫn dùng được '
-                        'khi cảm biến không nhận.'
-                  : 'Đã tắt mở khoá bằng sinh trắc học.',
+                  ? 'Biometric unlock is on. The PIN still works when the '
+                        'sensor refuses.'
+                  : 'Biometric unlock is off.',
             ),
           ),
         );
@@ -142,7 +153,10 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         hiddenTapCount: taps,
         diagnosticsUnlocked: taps >= hiddenTapsRequired,
         notice: taps >= hiddenTapsRequired
-            ? _notices.info('Đã mở mục Chẩn đoán ở cuối trang.')
+            ? _notices.info(
+                'Developer diagnostics unlocked at the bottom of '
+                'this page.',
+              )
             : null,
       ),
     );
@@ -160,7 +174,7 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   }) async {
     switch (result) {
       case Err<void>(:final failure):
-        final message = FailurePresenter.of(failure, context: 'mã PIN');
+        final message = FailurePresenter.of(failure, context: 'PIN');
         final isWrongPin = failure is SecurityFailure;
         emit(
           state.copyWith(
@@ -192,7 +206,7 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         emit(
           state.copyWith(
             status: LoadStatus.failed,
-            loadError: FailurePresenter.of(failure, context: 'thiết lập'),
+            loadError: FailurePresenter.of(failure, context: 'settings'),
           ),
         );
       case Ok<AppLockStatus>(:final value):
@@ -208,8 +222,8 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   }
 
   String? _pinMismatchError(String pin, String confirmPin) {
-    if (pin.isEmpty) return 'Nhập mã PIN.';
-    if (pin != confirmPin) return 'Hai ô mã PIN không khớp nhau.';
+    if (pin.isEmpty) return 'Enter a PIN.';
+    if (pin != confirmPin) return 'The two PINs do not match.';
     return null;
   }
 

@@ -32,12 +32,24 @@ final class ImportHistoryBloc
   }) : _revert = revertImport,
        _accounts = manageAccounts,
        super(const ImportHistoryState()) {
-    on<ImportHistoryStarted>(_onStarted, transformer: EventTransformers.restartable());
-    on<ImportHistoryNextPageRequested>(_onNextPage, transformer: EventTransformers.droppable());
+    on<ImportHistoryStarted>(
+      _onStarted,
+      transformer: EventTransformers.restartable(),
+    );
+    on<ImportHistoryNextPageRequested>(
+      _onNextPage,
+      transformer: EventTransformers.droppable(),
+    );
     on<ImportHistorySessionToggled>(_onSessionToggled);
-    on<ImportHistoryRevertRequested>(_onRevertRequested, transformer: EventTransformers.sequential());
+    on<ImportHistoryRevertRequested>(
+      _onRevertRequested,
+      transformer: EventTransformers.sequential(),
+    );
     on<ImportHistoryRevertDismissed>(_onRevertDismissed);
-    on<ImportHistoryRevertConfirmed>(_onRevertConfirmed, transformer: EventTransformers.sequential());
+    on<ImportHistoryRevertConfirmed>(
+      _onRevertConfirmed,
+      transformer: EventTransformers.sequential(),
+    );
   }
 
   final RevertImportUseCase _revert;
@@ -63,7 +75,7 @@ final class ImportHistoryBloc
         emit(
           state.copyWith(
             status: LoadStatus.failed,
-            loadError: FailurePresenter.of(failure, context: 'lịch sử nhập'),
+            loadError: FailurePresenter.of(failure, context: 'import history'),
           ),
         );
       case Ok<ImportHistoryPage>(:final value):
@@ -73,8 +85,8 @@ final class ImportHistoryBloc
             status: LoadStatus.ready,
             sessions: sessions,
             totalCount: value.totalCount,
-            hasMore: sessions.length < value.totalCount &&
-                value.sessions.isNotEmpty,
+            hasMore:
+                sessions.length < value.totalCount && value.sessions.isNotEmpty,
             isLoadingMore: false,
           ),
         );
@@ -97,7 +109,7 @@ final class ImportHistoryBloc
         emit(
           state.copyWith(
             isLoadingMore: false,
-            loadError: FailurePresenter.of(failure, context: 'lịch sử nhập'),
+            loadError: FailurePresenter.of(failure, context: 'import history'),
           ),
         );
       case Ok<ImportHistoryPage>(:final value):
@@ -110,8 +122,8 @@ final class ImportHistoryBloc
             sessions: sessions,
             totalCount: value.totalCount,
             isLoadingMore: false,
-            hasMore: sessions.length < value.totalCount &&
-                value.sessions.isNotEmpty,
+            hasMore:
+                sessions.length < value.totalCount && value.sessions.isNotEmpty,
           ),
         );
     }
@@ -136,7 +148,7 @@ final class ImportHistoryBloc
     };
     switch (preview) {
       case Err<RevertImpact>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'lượt nhập')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'import run')));
       case Ok<RevertImpact>(:final value):
         emit(
           state.copyWith(
@@ -173,7 +185,7 @@ final class ImportHistoryBloc
         emit(
           state.copyWith(
             clearPendingRevert: true,
-            notice: _noticeOf(failure, 'lượt nhập'),
+            notice: _noticeOf(failure, 'import run'),
           ),
         );
       case Ok<RevertImpact>(:final value):
@@ -209,16 +221,17 @@ final class ImportHistoryBloc
   String _revertSummaryOf(RevertImpact impact) {
     final rows = NumberFormatter.count(impact.deletedTransactionCount);
     if (impact.cancelledPairCount == 0) {
-      return 'Đã hoàn tác: xoá $rows giao dịch.';
+      return 'Reverted: $rows transactions removed.';
     }
-    return 'Đã hoàn tác: xoá $rows giao dịch và huỷ '
-        '${NumberFormatter.count(impact.cancelledPairCount)} cặp đối soát.';
+    return 'Reverted: $rows transactions removed and '
+        '${NumberFormatter.count(impact.cancelledPairCount)} reconciliation '
+        'pairs dropped.';
   }
 
   String _labelOf(RevertTarget target, int id) {
     for (final session in state.sessions) {
       if (target == RevertTarget.session && session.sessionId == id) {
-        return 'lượt nhập lúc ${session.startedAtText}';
+        return 'the import run of ${session.startedAtText}';
       }
       for (final file in session.files) {
         if (target == RevertTarget.file && file.recordId == id) {
@@ -226,7 +239,7 @@ final class ImportHistoryBloc
         }
       }
     }
-    return 'bản ghi này';
+    return 'this record';
   }
 
   Future<Map<int, String>> _loadAccountNames() async {

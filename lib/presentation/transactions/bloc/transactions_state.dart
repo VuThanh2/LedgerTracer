@@ -130,8 +130,9 @@ final class TransactionsState {
   /// [totalCount] có phải con số đúng của thứ đang hiển thị hay không.
   ///
   /// Sai khi Context Chip còn phải lọc trong bộ nhớ, vì phép đếm chạy ở cơ sở dữ
-  /// liệu và không biết tới ngữ cảnh. Giao diện đọc cờ này để hiển thị "ít nhất
-  /// N" thay vì một con số nói dối.
+  /// liệu và không biết tới ngữ cảnh. Vì phép lọc trong bộ nhớ chỉ **bớt** đi, đây
+  /// là cận trên: giao diện đọc cờ này để hiển thị "tối đa N" thay vì một con
+  /// số nói dối.
   bool get isCountExact => !context.narrowsInMemory;
 
   /// Số dòng thật sự đang hiển thị.

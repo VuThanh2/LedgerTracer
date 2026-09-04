@@ -61,7 +61,7 @@ final class AppLockState {
   bool get canUseBiometric => biometricEnabled && biometricAvailable;
 
   /// Chuỗi phải gõ đúng để nút xoá sáng lên.
-  static const String resetConfirmationPhrase = 'XOA TOAN BO';
+  static const String resetConfirmationPhrase = 'DELETE ALL DATA';
 
   bool get canConfirmReset =>
       resetConfirmationText.trim().toUpperCase() == resetConfirmationPhrase;
@@ -87,8 +87,7 @@ final class AppLockState {
     isVerifying: isVerifying ?? this.isVerifying,
     pinError: clearPinError ? null : (pinError ?? this.pinError),
     isResetPending: isResetPending ?? this.isResetPending,
-    resetConfirmationText:
-        resetConfirmationText ?? this.resetConfirmationText,
+    resetConfirmationText: resetConfirmationText ?? this.resetConfirmationText,
     isResetting: isResetting ?? this.isResetting,
     error: clearError ? null : (error ?? this.error),
   );

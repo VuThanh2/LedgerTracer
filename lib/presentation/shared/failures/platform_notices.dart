@@ -20,10 +20,15 @@ abstract final class PlatformNotices {
   ///
   /// Chỉ nói vế đầu thì người dùng tưởng chờ lâu là do máy yếu; chỉ nói vế sau
   /// thì họ tưởng ứng dụng bị treo.
-  static const FeedbackMessage webDegradation = FeedbackMessage.info(
-    'Trình duyệt không cho chạy nền thật, nên tác vụ này chạy ngay trên luồng '
-    'giao diện: màn hình có thể giật trong lúc xử lý, và nhiều file phải làm '
-    'lần lượt nên tổng thời gian dài hơn trên ứng dụng cài đặt.',
+  ///
+  /// Mức **cảnh báo**, không phải thông tin: bảng ngữ nghĩa của DESIGN.md xếp
+  /// "giới hạn xử lý trên Web" vào banner cảnh báo, và mức đó là đúng — đây là
+  /// điều kiện làm giao diện giật ngay trước mắt người dùng, không phải một ghi
+  /// chú trung tính.
+  static const FeedbackMessage webDegradation = FeedbackMessage.warning(
+    'Running on the web build. No isolates: heavy parsing shares the interface '
+    'thread, so the interface may stutter. No file-level parallelism either, '
+    'so the whole run takes longer than on the installed app.',
   );
 
   /// Kèm ở mọi luồng xuất báo cáo (UC-11).
@@ -32,7 +37,7 @@ abstract final class PlatformNotices {
   /// định gửi file đó cho ai *trước khi* mở nó ra đọc. File sao lưu ở UC-13 thì
   /// ngược lại — nó luôn được mã hoá.
   static const FeedbackMessage exportNotEncrypted = FeedbackMessage.warning(
-    'File xuất không được mã hoá. Bất kỳ ai mở được file cũng đọc được toàn bộ '
-    'nội dung.',
+    'The exported file is not encrypted. Anyone who opens it can read every '
+    'row.',
   );
 }

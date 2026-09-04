@@ -37,5 +37,29 @@ abstract final class DateFormatter {
       ? day(range.from)
       : '${day(range.from)} \u2013 ${day(range.to)}';
 
+  /// Đọc ngược [day]: `dd/mm/yyyy` thành một [DateTime] theo UTC, hoặc `null`
+  /// nếu chuỗi không phải một ngày.
+  ///
+  /// Ô ngày của Filter Panel là ô chữ chứ không phải lịch bật lên, nên phép đọc
+  /// ngược này là bắt buộc. Nó nhận cả `-` và `.` làm dấu phân cách vì người
+  /// dùng gõ tay, nhưng **không** đoán thứ tự: `03/04/2026` luôn là ngày 3 tháng
+  /// 4 — đoán theo giá trị sẽ khiến cùng một chuỗi mang hai nghĩa tuỳ tháng.
+  static DateTime? tryParseDay(String raw) {
+    final parts = raw.trim().split(RegExp(r'[/\-.]'));
+    if (parts.length != 3) return null;
+
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    if (parts[2].length != 4) return null;
+
+    final parsed = DateTime.utc(year, month, day);
+    // Chặn ngày tràn tháng: `31/02/2026` sẽ được `DateTime` cuộn sang tháng 3.
+    if (parsed.day != day || parsed.month != month) return null;
+    return parsed;
+  }
+
   static String _pad(int value) => value.toString().padLeft(2, '0');
 }

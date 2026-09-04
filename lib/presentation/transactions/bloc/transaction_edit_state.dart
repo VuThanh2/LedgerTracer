@@ -52,8 +52,7 @@ final class TransactionEditState {
   bool get isSaved => savedCancellingPair != null;
 
   /// Nút lưu có bấm được không.
-  bool get canSubmit =>
-      draft != null && isDirty && !isSubmitting && !isSaved;
+  bool get canSubmit => draft != null && isDirty && !isSubmitting && !isSaved;
 
   TransactionEditState copyWith({
     LoadStatus? status,

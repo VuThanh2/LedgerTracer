@@ -56,6 +56,13 @@ final class StatisticsState {
 
   final CashFlowPeriod period;
 
+  /// Khoảng ngày đang thu hẹp số liệu.
+  ///
+  /// Luôn `null` ở bản này: bản thiết kế không có ô chọn khoảng ngày ở màn
+  /// Thống kê — người dùng thu hẹp bằng cách bấm vào một cột rồi khoan xuống
+  /// danh sách giao dịch, nơi bộ lọc ngày đã có sẵn. Trường và sự kiện
+  /// `StatisticsDateRangeChanged` vẫn ở đây vì use case nhận được nó, nên thêm
+  /// ô chọn về sau chỉ là thêm widget chứ không phải sửa luồng dữ liệu.
   final DateRange? dateRange;
 
   /// Mặc định bật, **không** ghi nhớ giữa các lần mở màn hình (UC-10).

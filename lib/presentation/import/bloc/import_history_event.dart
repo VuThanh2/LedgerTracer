@@ -26,10 +26,7 @@ final class ImportHistorySessionToggled extends ImportHistoryEvent {
 /// nhiêu cặp đối soát, để hộp thoại xác nhận nói được con số cụ thể
 /// (UC-03 bước 4).
 final class ImportHistoryRevertRequested extends ImportHistoryEvent {
-  const ImportHistoryRevertRequested({
-    required this.target,
-    required this.id,
-  });
+  const ImportHistoryRevertRequested({required this.target, required this.id});
 
   final RevertTarget target;
 

@@ -59,7 +59,7 @@ final class ExportDatasetUseCase {
   final DateTime Function() _now;
 
   static const int _pageSize = 1000;
-  static const String _notEncryptedNote = 'File này không được mã hoá.';
+  static const String _notEncryptedNote = 'This file is not encrypted.';
 
   Future<Result<ExportResult>> execute(
     ExportDatasetRequest request, {
@@ -162,14 +162,14 @@ final class ExportDatasetUseCase {
     return ExportTable(
       metadata: <String>[..._filterMetadata(request, names), _notEncryptedNote],
       headers: const <String>[
-        'Ngày ghi nhận',
-        'Tài khoản',
-        'Số tiền',
-        'Loại tiền',
-        'Người chuyển/nhận',
-        'Nội dung',
-        'Đã đối soát',
-        'Dòng gốc',
+        'Booking date',
+        'Account',
+        'Amount',
+        'Currency',
+        'Counterparty',
+        'Memo',
+        'Reconciled',
+        'Source row',
       ],
       rows: rows,
     );
@@ -246,18 +246,18 @@ final class ExportDatasetUseCase {
 
     return ExportTable(
       metadata: <String>[
-        'Trạng thái: ${request.status == null ? 'tất cả' : request.status!.name}',
+        'Status: ${request.status == null ? 'all' : request.status!.name}',
         _notEncryptedNote,
       ],
       headers: const <String>[
-        'Trạng thái',
-        'Số tiền',
-        'Loại tiền',
-        'Chuyển ra - Ngày',
-        'Chuyển ra - Tài khoản',
-        'Nhận vào - Ngày',
-        'Nhận vào - Tài khoản',
-        'Lệch (ngày)',
+        'Status',
+        'Amount',
+        'Currency',
+        'Money out - date',
+        'Money out - account',
+        'Money in - date',
+        'Money in - account',
+        'Gap (days)',
       ],
       rows: rows,
     );
@@ -283,19 +283,19 @@ final class ExportDatasetUseCase {
 
     return ExportTable(
       metadata: <String>[
-        'Loại tiền: ${request.currency.code}',
-        'Gom nhóm theo: ${byAccount ? 'tài khoản' : request.period.name}',
-        if (request.dateRange != null) 'Khoảng ngày: ${request.dateRange}',
-        'Loại trừ giao dịch nội bộ đã đối soát: '
-            '${request.excludeInternalTransfers ? 'có' : 'không'}',
+        'Currency: ${request.currency.code}',
+        'Grouped by: ${byAccount ? 'account' : request.period.name}',
+        if (request.dateRange != null) 'Date range: ${request.dateRange}',
+        'Excluding confirmed internal transfers: '
+            '${request.excludeInternalTransfers ? 'yes' : 'no'}',
         _notEncryptedNote,
       ],
       headers: <String>[
-        byAccount ? 'Tài khoản' : 'Mốc thời gian',
-        'Tiền vào',
-        'Tiền ra',
-        'Ròng',
-        'Loại tiền',
+        byAccount ? 'Account' : 'Period',
+        'Money in',
+        'Money out',
+        'Net',
+        'Currency',
       ],
       rows: <List<String>>[
         for (final bucket in buckets)
@@ -325,7 +325,7 @@ final class ExportDatasetUseCase {
       metadata: <String>['File: ${record.fileName}', _notEncryptedNote],
       // Số thứ tự dòng gốc và lý do là hai cột làm cho luồng "sửa trên file gốc
       // rồi nhập lại" khả thi (UC-11).
-      headers: const <String>['Dòng gốc', 'Lý do', 'Trích đoạn'],
+      headers: const <String>['Source row', 'Reason', 'Excerpt'],
       rows: <List<String>>[
         for (final row in errorRows)
           <String>[row.sourceLineNumber.toString(), row.reason, row.rawExcerpt],
@@ -339,13 +339,13 @@ final class ExportDatasetUseCase {
   ) {
     final filter = request.filter;
     return <String>[
-      if (filter.keyword != null) 'Từ khoá: ${filter.keyword}',
+      if (filter.keyword != null) 'Keyword: ${filter.keyword}',
       if (filter.accountId != null)
-        'Tài khoản: ${names[filter.accountId] ?? filter.accountId}',
-      if (filter.dateRange != null) 'Khoảng ngày: ${filter.dateRange}',
-      if (filter.amountRange != null) 'Khoảng số tiền: ${filter.amountRange}',
-      if (filter.currency != null) 'Loại tiền: ${filter.currency!.code}',
-      if (filter.isEmpty) 'Không áp dụng bộ lọc nào.',
+        'Account: ${names[filter.accountId] ?? filter.accountId}',
+      if (filter.dateRange != null) 'Date range: ${filter.dateRange}',
+      if (filter.amountRange != null) 'Amount range: ${filter.amountRange}',
+      if (filter.currency != null) 'Currency: ${filter.currency!.code}',
+      if (filter.isEmpty) 'No filter applied.',
     ];
   }
 

@@ -55,8 +55,7 @@ final class ImportProgressViewModel {
   ///
   /// Không đo bằng số dòng, vì tổng số dòng của cả lượt chỉ biết được sau khi đã
   /// đọc xong mọi file — tức là sau khi thanh tiến trình không còn ai cần nữa.
-  double get sessionFraction =>
-      fileCount == 0 ? 0 : completedFiles / fileCount;
+  double get sessionFraction => fileCount == 0 ? 0 : completedFiles / fileCount;
 }
 
 /// Kết quả nhập của một file trên bảng tổng kết (UC-02 bước 8).
@@ -104,10 +103,10 @@ final class FileImportSummaryViewModel {
   bool get hasErrorRows => errorRowCount > 0;
 
   static String _labelOf(ImportFileStatus status) => switch (status) {
-    ImportFileStatus.completed => 'Hoàn tất',
-    ImportFileStatus.partiallyFailed => 'Có dòng lỗi',
-    ImportFileStatus.cancelled => 'Đã dừng',
-    ImportFileStatus.skipped => 'Đã bỏ qua',
+    ImportFileStatus.completed => 'Committed',
+    ImportFileStatus.partiallyFailed => 'Has error rows',
+    ImportFileStatus.cancelled => 'Cancelled',
+    ImportFileStatus.skipped => 'Skipped',
   };
 }
 

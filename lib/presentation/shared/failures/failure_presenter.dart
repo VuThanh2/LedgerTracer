@@ -18,63 +18,65 @@ import 'feedback_message.dart';
 /// [context], một mảnh danh từ ngắn do màn hình gọi truyền vào.
 abstract final class FailurePresenter {
   static FeedbackMessage of(Failure failure, {String? context}) {
-    final subject = context ?? 'mục này';
+    final subject = context ?? 'this item';
     return switch (failure) {
       // Dữ liệu vào phạm luật: người dùng sửa được ngay tại ô nhập, nên đây là
       // cảnh báo chứ không phải sự cố.
       ValidationFailure() => FeedbackMessage.warning(
-        'Dữ liệu nhập chưa hợp lệ. Hãy kiểm tra lại các ô vừa điền.',
+        'Something you entered is not valid. Check the fields you just filled '
+        'in.',
         detail: failure.message,
       ),
 
       // Bản ghi đã biến mất: cách xử lý là làm mới màn hình, không phải sửa ô
       // nhập — nên nó là một nhánh riêng và câu chữ phải nói ra điều đó.
       NotFoundFailure() => FeedbackMessage.warning(
-        'Không còn tìm thấy $subject. Danh sách có thể đã thay đổi, '
-        'hãy tải lại.',
+        'That $subject is no longer there. The list may have changed — reload '
+        'it.',
         detail: failure.message,
       ),
 
       StorageFailure() => FeedbackMessage.danger(
-        'Không đọc/ghi được dữ liệu trên thiết bị. Hãy thử lại.',
+        'Could not read or write data on this device. Try again.',
         detail: failure.message,
       ),
 
       FileAccessFailure() => FeedbackMessage.danger(
-        'Không truy cập được file. Hãy kiểm tra quyền truy cập '
-        'hoặc chọn lại file.',
+        'Could not reach the file. Check the access permission, or pick the '
+        'file again.',
         detail: failure.message,
       ),
 
       // Cả file không đọc được — khác hẳn một dòng lỗi, thứ đi về như dữ liệu và
       // không bao giờ tới đây (UC-02).
       ParsingFailure() => FeedbackMessage.danger(
-        'File không đúng định dạng hoặc đã hỏng nên không đọc được.',
+        'The file is not in a supported format, or it is damaged, so it cannot '
+        'be read.',
         detail: failure.message,
       ),
 
       // Chạm tới lớp bảo vệ. Câu chữ không bao giờ nói bí mật sai ở chỗ nào.
       SecurityFailure() => FeedbackMessage.danger(
-        'Sai mã PIN hoặc sai mật khẩu.',
+        'Wrong PIN or wrong password.',
         detail: failure.message,
       ),
 
       // Huỷ là một kết cục, không phải một lỗi: phần đã ghi vẫn ở đó, nên giao
       // diện báo là đã dừng chứ không báo là có vấn đề (UC-02 bước 7).
       CancelledFailure() => FeedbackMessage.info(
-        'Đã dừng theo yêu cầu. Phần đã xử lý xong vẫn được giữ lại.',
+        'Stopped as you asked. Everything already processed is kept.',
         detail: failure.message,
       ),
 
       // Nền tảng không làm được. Giao diện lẽ ra đã ẩn hẳn tuỳ chọn, nên tới đây
       // nghĩa là lưới an toàn đã đỡ (UC-12, UC-14).
       UnsupportedOnPlatformFailure() => FeedbackMessage.info(
-        'Nền tảng đang chạy không hỗ trợ chức năng này.',
+        'The platform this build runs on does not support that.',
         detail: failure.message,
       ),
 
       UnexpectedFailure() => FeedbackMessage.danger(
-        'Đã xảy ra lỗi không mong đợi.',
+        'Something unexpected went wrong.',
         detail: failure.message,
       ),
     };

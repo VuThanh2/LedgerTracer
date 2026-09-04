@@ -45,28 +45,58 @@ final class TransactionsBloc
     // Mỗi nhóm sự kiện có một cách xử lý dòng riêng, và cả ba đều là quyết định
     // chứ không phải mặc định: mặc định của `bloc` là chạy song song, thứ sẽ
     // trộn hai trang vào nhau ở phân trang và để hai lệnh xoá chồng lên nhau.
-    on<TransactionsStarted>(_onStarted, transformer: EventTransformers.restartable());
-    on<TransactionsRefreshed>(_onRefreshed, transformer: EventTransformers.restartable());
-    on<TransactionsInvalidated>(_onInvalidated, transformer: EventTransformers.restartable());
+    on<TransactionsStarted>(
+      _onStarted,
+      transformer: EventTransformers.restartable(),
+    );
+    on<TransactionsRefreshed>(
+      _onRefreshed,
+      transformer: EventTransformers.restartable(),
+    );
+    on<TransactionsInvalidated>(
+      _onInvalidated,
+      transformer: EventTransformers.restartable(),
+    );
     on<TransactionsKeywordChanged>(
       _onKeywordChanged,
       transformer: EventTransformers.searchInput(),
     );
     on<TransactionsFilterDraftChanged>(_onDraftChanged);
-    on<TransactionsFilterApplied>(_onFilterApplied, transformer: EventTransformers.restartable());
-    on<TransactionsFilterCleared>(_onFilterCleared, transformer: EventTransformers.restartable());
-    on<TransactionsChipRemoved>(_onChipRemoved, transformer: EventTransformers.restartable());
+    on<TransactionsFilterApplied>(
+      _onFilterApplied,
+      transformer: EventTransformers.restartable(),
+    );
+    on<TransactionsFilterCleared>(
+      _onFilterCleared,
+      transformer: EventTransformers.restartable(),
+    );
+    on<TransactionsChipRemoved>(
+      _onChipRemoved,
+      transformer: EventTransformers.restartable(),
+    );
     on<TransactionsNextPageRequested>(
       _onNextPage,
       // Bỏ qua chứ không xếp hàng: cuộn nhanh phát ra rất nhiều sự kiện, và xếp
       // hàng chúng lại nghĩa là nạp thêm mười trang mà người dùng đã lướt qua.
       transformer: EventTransformers.droppable(),
     );
-    on<TransactionSelected>(_onSelected, transformer: EventTransformers.restartable());
-    on<TransactionDetailRequested>(_onDetailRequested, transformer: EventTransformers.restartable());
-    on<TransactionDeleteRequested>(_onDeleteRequested, transformer: EventTransformers.sequential());
+    on<TransactionSelected>(
+      _onSelected,
+      transformer: EventTransformers.restartable(),
+    );
+    on<TransactionDetailRequested>(
+      _onDetailRequested,
+      transformer: EventTransformers.restartable(),
+    );
+    on<TransactionDeleteRequested>(
+      _onDeleteRequested,
+      transformer: EventTransformers.sequential(),
+    );
     on<TransactionDeleteDismissed>(_onDeleteDismissed);
-    on<TransactionDeleteConfirmed>(_onDeleteConfirmed, transformer: EventTransformers.sequential());
+    on<TransactionDeleteConfirmed>(
+      _onDeleteConfirmed,
+      transformer: EventTransformers.sequential(),
+    );
   }
 
   final QueryTransactionsUseCase _query;
@@ -266,7 +296,7 @@ final class TransactionsBloc
         emit(
           state.copyWith(
             isLoadingMore: false,
-            loadError: FailurePresenter.of(failure, context: 'giao dịch'),
+            loadError: FailurePresenter.of(failure, context: 'transaction'),
           ),
         );
       case Ok<_CollectedPage>(:final value):
@@ -318,7 +348,7 @@ final class TransactionsBloc
     final result = await _delete.isInPair(event.transactionId);
     switch (result) {
       case Err<bool>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'giao dịch')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'transaction')));
       case Ok<bool>(:final value):
         emit(
           state.copyWith(
@@ -350,7 +380,7 @@ final class TransactionsBloc
         emit(
           state.copyWith(
             clearPendingDelete: true,
-            notice: _noticeOf(failure, 'giao dịch'),
+            notice: _noticeOf(failure, 'transaction'),
           ),
         );
       case Ok<bool>(value: final cancelledPair):
@@ -363,8 +393,9 @@ final class TransactionsBloc
             status: LoadStatus.loading,
             notice: _notices.success(
               cancelledPair
-                  ? 'Đã xoá giao dịch. Cặp đối soát liên quan đã bị huỷ.'
-                  : 'Đã xoá giao dịch.',
+                  ? 'Transaction deleted. The reconciliation pair it belonged '
+                        'to was dropped.'
+                  : 'Transaction deleted.',
             ),
           ),
         );
@@ -393,7 +424,7 @@ final class TransactionsBloc
         emit(
           state.copyWith(
             status: LoadStatus.failed,
-            loadError: FailurePresenter.of(failure, context: 'giao dịch'),
+            loadError: FailurePresenter.of(failure, context: 'transaction'),
           ),
         );
       case Ok<_CollectedPage>(:final value):
@@ -477,7 +508,7 @@ final class TransactionsBloc
         emit(
           state.copyWith(
             detailStatus: LoadStatus.failed,
-            notice: _noticeOf(failure, 'giao dịch'),
+            notice: _noticeOf(failure, 'transaction'),
           ),
         );
       case Ok<Transaction?>(value: final tx):
@@ -487,7 +518,8 @@ final class TransactionsBloc
               detailStatus: LoadStatus.failed,
               clearDetail: true,
               notice: _notices.warning(
-                'Giao dịch này không còn tồn tại. Danh sách đã được tải lại.',
+                'That transaction no longer exists. The list has been '
+                'reloaded.',
               ),
             ),
           );
@@ -521,7 +553,9 @@ final class TransactionsBloc
   /// `QueryTransactionsUseCase.findListItemById` sẽ thay cả hàm này bằng một lời
   /// gọi.
   Future<bool> _isReconciled(Transaction tx) async {
-    final cached = state.rows.where((row) => row.transactionId == tx.transactionId);
+    final cached = state.rows.where(
+      (row) => row.transactionId == tx.transactionId,
+    );
     if (cached.isNotEmpty) return cached.first.isReconciled;
 
     final result = await _query.execute(
@@ -569,11 +603,12 @@ final class TransactionsBloc
     return keyword.isEmpty ? null : keyword;
   }
 
-  List<FilterChipViewModel> _chipsOf(TransactionsState current) => FilterChips.of(
-    filter: current.filter,
-    context: current.context,
-    accountNames: current.accountNames,
-  );
+  List<FilterChipViewModel> _chipsOf(TransactionsState current) =>
+      FilterChips.of(
+        filter: current.filter,
+        context: current.context,
+        accountNames: current.accountNames,
+      );
 
   TransientNotice _noticeOf(Failure failure, String subject) =>
       _notices.of(FailurePresenter.of(failure, context: subject));

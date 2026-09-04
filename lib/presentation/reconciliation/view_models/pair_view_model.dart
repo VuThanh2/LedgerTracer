@@ -78,7 +78,7 @@ final class PairRowViewModel {
   final PairSideViewModel incoming;
 
   static String _driftTextOf(int days) =>
-      days == 0 ? 'Cùng ngày' : 'Lệch $days ngày';
+      days == 0 ? 'same day' : '$days day gap';
 }
 
 /// Một cặp đang mở, kèm các ứng viên ghép thay thế của từng vế (UC-09 bước 2).
@@ -142,7 +142,7 @@ final class RejectedRowViewModel {
       summaryText: a == null || b == null
           // Một vế đã bị xoá ở đường khác. Phán quyết vẫn còn và vẫn gỡ được,
           // nên nó vẫn hiện — chỉ là không còn hai vế để đối chiếu.
-          ? 'Một trong hai giao dịch không còn tồn tại.'
+          ? 'One of the two transactions no longer exists.'
           : '${MoneyFormatter.absoluteWithCurrency(b.amount)} · '
                 '${DateFormatter.day(a.bookingDate)}',
       sideA: a == null

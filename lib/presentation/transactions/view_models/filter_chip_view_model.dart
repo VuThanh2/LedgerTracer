@@ -68,23 +68,25 @@ abstract final class FilterChips {
     if (filter.keyword != null)
       FilterChipViewModel(
         kind: FilterChipKind.keyword,
-        label: 'Từ khoá: ${filter.keyword}',
+        label: 'Keyword: ${filter.keyword}',
       ),
     if (filter.accountId != null)
       FilterChipViewModel(
         kind: FilterChipKind.account,
-        label: 'Tài khoản: '
+        label:
+            'Account: '
             '${accountNames[filter.accountId] ?? filter.accountId}',
       ),
     if (filter.dateRange != null)
       FilterChipViewModel(
         kind: FilterChipKind.dateRange,
-        label: 'Ngày: ${DateFormatter.range(filter.dateRange!)}',
+        label: 'Date: ${DateFormatter.range(filter.dateRange!)}',
       ),
     if (filter.amountRange != null)
       FilterChipViewModel(
         kind: FilterChipKind.amountRange,
-        label: 'Số tiền: '
+        label:
+            'Amount: '
             '${MoneyFormatter.signed(filter.amountRange!.min)} – '
             '${MoneyFormatter.signedWithCurrency(filter.amountRange!.max)}',
       ),
@@ -95,17 +97,17 @@ abstract final class FilterChips {
     if (filter.currency != null && filter.amountRange == null)
       FilterChipViewModel(
         kind: FilterChipKind.currency,
-        label: 'Loại tiền: ${filter.currency!.code}',
+        label: 'Currency: ${filter.currency!.code}',
       ),
     if (context.filtersByImport)
       FilterChipViewModel(
         kind: FilterChipKind.importFile,
-        label: 'Lượt nhập: ${context.importFileName ?? ''}',
+        label: 'Import: ${context.importFileName ?? ''}',
       ),
     if (context.excludeInternalTransfers)
       const FilterChipViewModel(
         kind: FilterChipKind.internalTransfers,
-        label: 'Không gồm chuyển khoản nội bộ',
+        label: 'Excluding internal transfers',
       ),
   ];
 }

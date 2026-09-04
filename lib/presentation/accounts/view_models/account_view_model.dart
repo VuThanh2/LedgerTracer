@@ -82,7 +82,7 @@ final class AccountFormDraft {
   /// sai **trước khi** bấm lưu. Bỏ vế thứ hai thì lỗi duy nhất họ nhận được là
   /// một `ValidationFailure` chung chung không gắn với ô nào.
   String? get displayNameError =>
-      displayName.trim().isEmpty ? 'Nhập tên tài khoản.' : null;
+      displayName.trim().isEmpty ? 'Enter an account name.' : null;
 
   bool get isValid => displayNameError == null;
 }

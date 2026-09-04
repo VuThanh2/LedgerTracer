@@ -68,9 +68,9 @@ final class ExportState {
   }
 
   String get stageLabel => switch (stage) {
-    ExportStage.collecting => 'Đang gom dữ liệu…',
-    ExportStage.encoding => 'Đang tạo file…',
-    ExportStage.saving => 'Đang lưu…',
+    ExportStage.collecting => 'Collecting rows…',
+    ExportStage.encoding => 'Encoding the file…',
+    ExportStage.saving => 'Saving…',
     null => '',
   };
 

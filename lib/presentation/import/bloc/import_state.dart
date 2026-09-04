@@ -24,8 +24,7 @@ enum ImportStep {
   /// Bảng tổng kết.
   summary;
 
-  bool get canGoBack =>
-      this == ImportStep.assignAccounts;
+  bool get canGoBack => this == ImportStep.assignAccounts;
 }
 
 /// Trạng thái tab *Nhập mới*.
@@ -84,11 +83,15 @@ final class ImportState {
 
   final FeedbackMessage? error;
 
-  List<ImportFileEntry> get recognizedFiles =>
-      <ImportFileEntry>[for (final file in files) if (file.isRecognized) file];
+  List<ImportFileEntry> get recognizedFiles => <ImportFileEntry>[
+    for (final file in files)
+      if (file.isRecognized) file,
+  ];
 
-  List<ImportFileEntry> get unrecognizedFiles =>
-      <ImportFileEntry>[for (final file in files) if (!file.isRecognized) file];
+  List<ImportFileEntry> get unrecognizedFiles => <ImportFileEntry>[
+    for (final file in files)
+      if (!file.isRecognized) file,
+  ];
 
   /// Bước 1 → 2: cần ít nhất một file đọc được.
   bool get canAssignAccounts => recognizedFiles.isNotEmpty;

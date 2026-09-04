@@ -57,20 +57,47 @@ final class ReconciliationBloc
        _accounts = manageAccounts,
        _cashFlow = viewCashFlow,
        super(const ReconciliationState()) {
-    on<ReconciliationStarted>(_onStarted, transformer: EventTransformers.restartable());
-    on<ReconciliationGroupSelected>(_onGroupSelected, transformer: EventTransformers.restartable());
-    on<ReconciliationNextPageRequested>(_onNextPage, transformer: EventTransformers.droppable());
-    on<ReconciliationPairOpened>(_onPairOpened, transformer: EventTransformers.restartable());
+    on<ReconciliationStarted>(
+      _onStarted,
+      transformer: EventTransformers.restartable(),
+    );
+    on<ReconciliationGroupSelected>(
+      _onGroupSelected,
+      transformer: EventTransformers.restartable(),
+    );
+    on<ReconciliationNextPageRequested>(
+      _onNextPage,
+      transformer: EventTransformers.droppable(),
+    );
+    on<ReconciliationPairOpened>(
+      _onPairOpened,
+      transformer: EventTransformers.restartable(),
+    );
     // Chạy quét là tác vụ dài duy nhất của màn hình này: bấm lần thứ hai trong
     // lúc lượt đầu còn chạy phải **rơi**, không được xếp hàng để chạy lại ngay
     // sau đó. Đường dừng là nút Huỷ.
-    on<ReconciliationRunRequested>(_onRunRequested, transformer: EventTransformers.droppable());
+    on<ReconciliationRunRequested>(
+      _onRunRequested,
+      transformer: EventTransformers.droppable(),
+    );
     on<ReconciliationRunDismissed>(_onRunDismissed);
     on<ReconciliationRunCancelled>(_onRunCancelled);
-    on<ReconciliationPairConfirmed>(_onPairConfirmed, transformer: EventTransformers.sequential());
-    on<ReconciliationPairRejected>(_onPairRejected, transformer: EventTransformers.sequential());
-    on<ReconciliationRejectionUndone>(_onRejectionUndone, transformer: EventTransformers.sequential());
-    on<ReconciliationMatchWindowChanged>(_onMatchWindowChanged, transformer: EventTransformers.sequential());
+    on<ReconciliationPairConfirmed>(
+      _onPairConfirmed,
+      transformer: EventTransformers.sequential(),
+    );
+    on<ReconciliationPairRejected>(
+      _onPairRejected,
+      transformer: EventTransformers.sequential(),
+    );
+    on<ReconciliationRejectionUndone>(
+      _onRejectionUndone,
+      transformer: EventTransformers.sequential(),
+    );
+    on<ReconciliationMatchWindowChanged>(
+      _onMatchWindowChanged,
+      transformer: EventTransformers.sequential(),
+    );
   }
 
   final RunReconciliationUseCase _run;
@@ -153,7 +180,13 @@ final class ReconciliationBloc
     Emitter<ReconciliationState> emit,
   ) async {
     if (event.group == state.group) return;
-    emit(state.copyWith(group: event.group, clearOpenPair: true, clearDetail: true));
+    emit(
+      state.copyWith(
+        group: event.group,
+        clearOpenPair: true,
+        clearDetail: true,
+      ),
+    );
     await _reloadGroup(emit);
   }
 
@@ -176,7 +209,10 @@ final class ReconciliationBloc
         emit(
           state.copyWith(
             isLoadingMore: false,
-            loadError: FailurePresenter.of(failure, context: 'cặp đối soát'),
+            loadError: FailurePresenter.of(
+              failure,
+              context: 'reconciliation pair',
+            ),
           ),
         );
       case Ok<PairsPage>(:final value):
@@ -221,7 +257,8 @@ final class ReconciliationBloc
       emit(
         state.copyWith(
           notice: _notices.info(
-            'Đối soát cần ít nhất hai tài khoản có giao dịch để có gì mà ghép.',
+            'Reconciliation needs at least two accounts holding transactions '
+            'before there is anything to match.',
           ),
         ),
       );
@@ -231,7 +268,9 @@ final class ReconciliationBloc
     // dùng có thể đã duyệt nửa danh sách, nên việc đó phải được nói ra trước
     // khi nó xảy ra, không phải sau (UC-08).
     if (state.runWouldClearPending && !event.acknowledgedClearingPending) {
-      emit(state.copyWith(runPhase: ReconciliationRunPhase.awaitingConfirmation));
+      emit(
+        state.copyWith(runPhase: ReconciliationRunPhase.awaitingConfirmation),
+      );
       return;
     }
 
@@ -268,7 +307,7 @@ final class ReconciliationBloc
           state.copyWith(
             runPhase: ReconciliationRunPhase.idle,
             clearProgress: true,
-            notice: _noticeOf(failure, 'lượt đối soát'),
+            notice: _noticeOf(failure, 'reconciliation scan'),
           ),
         );
       case Ok<RunReconciliationResult>(:final value):
@@ -320,12 +359,12 @@ final class ReconciliationBloc
     final result = await _confirm.execute(event.pairId);
     switch (result) {
       case Err<ReconciliationPair>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'cặp đối soát')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'reconciliation pair')));
       case Ok<ReconciliationPair>():
         emit(
           state.copyWith(
             status: LoadStatus.loading,
-            notice: _notices.success('Đã xác nhận cặp đối soát.'),
+            notice: _notices.success('Pair confirmed.'),
             clearUndoableRejection: true,
           ),
         );
@@ -341,7 +380,7 @@ final class ReconciliationBloc
     final result = await _reject.execute(event.pairId);
     switch (result) {
       case Err<RejectedMatch>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'cặp đối soát')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'reconciliation pair')));
       case Ok<RejectedMatch>(:final value):
         emit(
           state.copyWith(
@@ -350,7 +389,7 @@ final class ReconciliationBloc
             // quả lâu dài của một cú bấm trông như chỉ xoá một dòng (UC-09).
             status: LoadStatus.loading,
             notice: _notices.info(
-              'Đã ghi nhận từ chối. Cặp này sẽ không được gợi ý lại.',
+              'Rejection recorded. This pair will not be suggested again.',
             ),
             undoableRejectionId: value.rejectedMatchId,
           ),
@@ -366,7 +405,7 @@ final class ReconciliationBloc
     final result = await _reject.undo(event.rejectedMatchId);
     switch (result) {
       case Err<void>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'phán quyết từ chối')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'rejection')));
       case Ok<void>():
         emit(
           state.copyWith(
@@ -376,8 +415,8 @@ final class ReconciliationBloc
             // vừa "được khôi phục" mà không có ở đâu cả.
             status: LoadStatus.loading,
             notice: _notices.success(
-              'Đã gỡ phán quyết. Cặp này sẽ được xét lại ở lần chạy đối soát '
-              'kế tiếp.',
+              'Rejection lifted. This pair becomes a candidate again on the '
+              'next scan.',
             ),
             clearUndoableRejection: true,
           ),
@@ -394,14 +433,14 @@ final class ReconciliationBloc
     final result = await _run.setMatchWindow(event.days);
     switch (result) {
       case Err<MatchWindow>(:final failure):
-        emit(state.copyWith(notice: _noticeOf(failure, 'ngưỡng lệch')));
+        emit(state.copyWith(notice: _noticeOf(failure, 'match window')));
       case Ok<MatchWindow>(:final value):
         emit(
           state.copyWith(
             matchWindowDays: value.days,
             notice: _notices.info(
-              'Ngưỡng lệch mới chỉ áp dụng cho lần chạy sau; các cặp đã xác '
-              'nhận không bị đụng tới.',
+              'The new match window applies to the next scan only; confirmed '
+              'pairs are never touched.',
             ),
           ),
         );
@@ -414,7 +453,10 @@ final class ReconciliationBloc
   ///
   /// Gỡ tại chỗ **trước** khi đọc lại là có chủ đích: người dùng vừa vuốt một
   /// thẻ đi và phải thấy nó đi ngay, không phải chờ một lượt truy vấn.
-  Future<void> _afterVerdict(int pairId, Emitter<ReconciliationState> emit) async {
+  Future<void> _afterVerdict(
+    int pairId,
+    Emitter<ReconciliationState> emit,
+  ) async {
     emit(
       state.copyWith(
         pairs: <PairRowViewModel>[
@@ -445,7 +487,7 @@ final class ReconciliationBloc
           state.copyWith(
             detailStatus: LoadStatus.failed,
             clearDetail: true,
-            notice: _noticeOf(failure, 'cặp đối soát'),
+            notice: _noticeOf(failure, 'reconciliation pair'),
           ),
         );
       case Ok<MatchAlternativesView>(:final value):
@@ -511,7 +553,10 @@ final class ReconciliationBloc
         emit(
           state.copyWith(
             status: LoadStatus.failed,
-            loadError: FailurePresenter.of(failure, context: 'cặp đối soát'),
+            loadError: FailurePresenter.of(
+              failure,
+              context: 'reconciliation pair',
+            ),
           ),
         );
       case Ok<PairsPage>(:final value):
@@ -548,9 +593,7 @@ final class ReconciliationBloc
       final value = page.valueOrNull;
       if (value == null) break;
       for (final view in value.items) {
-        rows.add(
-          RejectedRowViewModel.of(view, accountNames: _accountNames),
-        );
+        rows.add(RejectedRowViewModel.of(view, accountNames: _accountNames));
       }
       offset += value.items.length;
       if (!value.hasMore) break;
@@ -574,18 +617,18 @@ final class ReconciliationBloc
   FeedbackMessage _runSummaryOf(RunReconciliationResult result) {
     if (result.wasCancelled) {
       return FeedbackMessage.info(
-        'Đã dừng giữa chừng sau khi tìm được ${result.suggestedPairsFound} '
-        'cặp. Chạy lại để quét trọn.',
+        'Stopped midway after finding ${result.suggestedPairsFound} pairs. Run '
+        'the scan again to cover everything.',
       );
     }
     if (result.suggestedPairsFound == 0) {
       return const FeedbackMessage.info(
-        'Không tìm thấy cặp chuyển khoản nội bộ nào. Thử nới ngưỡng lệch nếu '
-        'hai sao kê ghi nhận lệch ngày.',
+        'No internal transfer pairs found. Try widening the match window if '
+        'the two statements book the transfer on different days.',
       );
     }
     return FeedbackMessage.success(
-      'Tìm được ${result.suggestedPairsFound} cặp chờ quyết định.',
+      '${result.suggestedPairsFound} pairs are awaiting a decision.',
     );
   }
 

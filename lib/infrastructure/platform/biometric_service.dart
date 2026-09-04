@@ -45,7 +45,7 @@ final class LocalAuthBiometricAuthenticator implements BiometricAuthenticator {
     if (kIsWeb) return false;
     try {
       return await _localAuth.authenticate(
-        localizedReason: 'Xác thực để mở khoá LedgerTracer',
+        localizedReason: 'Authenticate to unlock LedgerTracer',
         // Chỉ nhận sinh trắc học: mã PIN của thiết bị là một bí mật khác với mã
         // PIN của ứng dụng, và để hệ điều hành nhận mã khoá màn hình ở đây sẽ
         // biến lớp khoá riêng của ứng dụng thành lớp khoá của thiết bị.

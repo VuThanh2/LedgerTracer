@@ -42,7 +42,10 @@ final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
     on<DiagnosticsBatchSizeChanged>(_onBatchSizeChanged);
     // Một lượt đo đang chạy chiếm trọn thiết bị; bấm lần nữa phải rơi, không
     // được xếp hàng — kết quả của lượt thứ hai sẽ nhiễu vì lượt đầu còn dư âm.
-    on<DiagnosticsRunRequested>(_onRunRequested, transformer: EventTransformers.droppable());
+    on<DiagnosticsRunRequested>(
+      _onRunRequested,
+      transformer: EventTransformers.droppable(),
+    );
     on<DiagnosticsCleared>(_onCleared);
   }
 
@@ -122,7 +125,7 @@ final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
             state.copyWith(
               isRunning: false,
               runs: results,
-              error: FailurePresenter.of(failure, context: 'lượt đo'),
+              error: FailurePresenter.of(failure, context: 'benchmark run'),
             ),
           );
           return;
@@ -174,8 +177,7 @@ final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
     final frames = _frames.stop();
 
     return result.map(
-      (value) =>
-          BenchmarkRunViewModel.of(value.runs.first, frames: frames),
+      (value) => BenchmarkRunViewModel.of(value.runs.first, frames: frames),
     );
   }
 }

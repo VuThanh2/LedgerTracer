@@ -18,8 +18,8 @@ enum BenchmarkWorkload {
   reconciliationScan;
 
   String get label => switch (this) {
-    BenchmarkWorkload.statementImport => 'Nhập sao kê (UC-02)',
-    BenchmarkWorkload.reconciliationScan => 'Quét đối soát (UC-08)',
+    BenchmarkWorkload.statementImport => 'Statement import (UC-02)',
+    BenchmarkWorkload.reconciliationScan => 'Reconciliation scan (UC-08)',
   };
 
   int get defaultBatchSize => switch (this) {
@@ -88,7 +88,7 @@ final class BenchmarkRunViewModel {
     batchSize: run.strategy.batchSize,
     elapsedText: '${run.elapsed.inMilliseconds} ms',
     throughputText:
-        '${NumberFormatter.count(run.itemsPerSecond.round())} mục/giây',
+        '${NumberFormatter.count(run.itemsPerSecond.round())} items/s',
     // Số lô suy ra từ cấu hình chứ không lấy từ kết quả: `BenchmarkRun` không
     // mang nó, và nó là một phép chia chính xác chứ không phải một ước lượng —
     // workload giao đúng một lô mỗi [batchSize] phần tử.
@@ -97,7 +97,8 @@ final class BenchmarkRunViewModel {
     ),
     itemsProcessedText: NumberFormatter.count(run.itemsProcessed),
     // Xin isolate mà nhận về luồng chính: nói thẳng ra thay vì giấu (UC-14).
-    degraded: run.strategy.mode == ExecutionMode.isolate &&
+    degraded:
+        run.strategy.mode == ExecutionMode.isolate &&
         run.effectiveMode == ExecutionMode.mainThread,
     frames: frames,
   );
@@ -118,7 +119,7 @@ final class BenchmarkRunViewModel {
   final FrameTimingStats frames;
 
   static String _modeLabelOf(ExecutionMode mode) => switch (mode) {
-    ExecutionMode.isolate => 'Isolate nền',
-    ExecutionMode.mainThread => 'Luồng giao diện',
+    ExecutionMode.isolate => 'Background isolate',
+    ExecutionMode.mainThread => 'Interface thread',
   };
 }

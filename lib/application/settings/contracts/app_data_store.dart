@@ -25,7 +25,7 @@ final class BackupManifest {
 /// thì phải tìm bản sao lưu khác.
 final class CorruptBackupException implements Exception {
   const CorruptBackupException([
-    this.message = 'File sao lưu không đúng định dạng hoặc đã hỏng.',
+    this.message = 'The backup file is not in the expected format, or it is damaged.',
   ]);
 
   final String message;

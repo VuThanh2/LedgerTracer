@@ -39,8 +39,7 @@ abstract final class MoneyFormatter {
   /// dấu và loại tiền là hai điều khiển riêng.
   static String plain(Money amount) => _groupedMagnitude(amount);
 
-  static String _signOf(Money amount) =>
-      amount.isOutgoing ? minusSign : '+';
+  static String _signOf(Money amount) => amount.isOutgoing ? minusSign : '+';
 
   /// Phân nhóm phần nguyên, giữ nguyên phần thập phân theo độ chính xác của
   /// chính loại tiền — VND không có phần thập phân, USD có hai chữ số.

@@ -30,8 +30,8 @@ enum ReconciliationGroup {
   };
 
   String get label => switch (this) {
-    ReconciliationGroup.pending => 'Chờ quyết định',
-    ReconciliationGroup.confirmed => 'Đã xác nhận',
-    ReconciliationGroup.rejected => 'Đã từ chối',
+    ReconciliationGroup.pending => 'Awaiting decision',
+    ReconciliationGroup.confirmed => 'Confirmed',
+    ReconciliationGroup.rejected => 'Rejected',
   };
 }

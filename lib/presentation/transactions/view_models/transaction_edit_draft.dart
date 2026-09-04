@@ -127,21 +127,18 @@ final class TransactionEditDraft {
   _ParsedAmount _parseAmount() {
     final decimal = NumberFormatter.toDecimalInput(amountText);
     if (decimal == null) {
-      return const _ParsedAmount(null, 'Nhập một số tiền.');
+      return const _ParsedAmount(null, 'Enter an amount.');
     }
     try {
       final magnitude = Money.fromDecimalString(decimal, currency).absolute;
-      return _ParsedAmount(
-        direction.isOutgoing ? -magnitude : magnitude,
-        null,
-      );
+      return _ParsedAmount(direction.isOutgoing ? -magnitude : magnitude, null);
     } on AmountPrecisionError {
       return _ParsedAmount(
         null,
-        '${currency.code} không có tới từng ấy chữ số thập phân.',
+        '${currency.code} does not have that many decimal places.',
       );
     } on MalformedAmountError {
-      return const _ParsedAmount(null, 'Nhập một số tiền.');
+      return const _ParsedAmount(null, 'Enter an amount.');
     }
   }
 }

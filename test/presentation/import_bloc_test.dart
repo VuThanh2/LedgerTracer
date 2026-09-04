@@ -336,7 +336,7 @@ void main() {
         (state) => state.step == ImportStep.summary,
       );
 
-      expect(state.summary!.files.single.statusLabel, 'Đã bỏ qua');
+      expect(state.summary!.files.single.statusLabel, 'Skipped');
       expect(db.transactionRows, isEmpty);
       // Bỏ qua là một **quyết định**, không phải lỗi đọc file: lượt nhập vẫn ghi
       // nhận nó để lịch sử phản ánh trung thực cả lượt.

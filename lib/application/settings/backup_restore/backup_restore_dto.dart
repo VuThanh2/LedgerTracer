@@ -21,7 +21,7 @@ abstract interface class BackupCodec {
 /// mật khẩu mà nó nói tới.
 final class BackupPasswordException implements Exception {
   const BackupPasswordException([
-    this.message = 'Sai mật khẩu hoặc file sao lưu đã hỏng.',
+    this.message = 'Wrong password, or the backup file is damaged.',
   ]);
 
   final String message;

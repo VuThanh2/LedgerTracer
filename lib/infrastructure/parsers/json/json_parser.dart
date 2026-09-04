@@ -41,7 +41,7 @@ final class JsonParser implements StatementParser {
     final layout = ColumnLayout.fromHeader(keys);
     if (!layout.isUsable) {
       throw const FormatException(
-        'Không nhận ra trường ngày và số tiền trong file JSON.',
+        'No date field and amount field were recognised in the JSON file.',
       );
     }
 
@@ -91,7 +91,7 @@ final class JsonParser implements StatementParser {
     try {
       decoded = jsonDecode(utf8.decode(bytes, allowMalformed: true));
     } on FormatException catch (error) {
-      throw FormatException('File JSON không hợp lệ: ${error.message}');
+      throw FormatException('The JSON file is not valid: ${error.message}');
     }
 
     final Object? array = switch (decoded) {
@@ -101,7 +101,7 @@ final class JsonParser implements StatementParser {
     };
     if (array is! List<Object?>) {
       throw const FormatException(
-        'File JSON không chứa mảng giao dịch nào đọc được.',
+        'The JSON file holds no readable array of transactions.',
       );
     }
     return <Map<String, Object?>>[
