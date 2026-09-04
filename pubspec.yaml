@@ -45,6 +45,8 @@ dependencies:
   file_picker: ^12.1.1
   local_auth: ^3.0.2
   sqflite_common: ^2.5.11
+  flutter_bloc: ^9.1.1
+  bloc: ^9.2.1
 
 dev_dependencies:
   flutter_test:
