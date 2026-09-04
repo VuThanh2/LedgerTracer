@@ -13,10 +13,14 @@ import '../../../transactions/view_models/transaction_context.dart';
 /// vào đúng một kiểu tổng đóng. Định dạng file (CSV/Excel) **không** nằm ở đây:
 /// nó là thứ người dùng chọn **trong** dialog, còn cái này là thứ họ mang tới.
 ///
-/// [criteriaLines] là danh sách tiêu chí sẽ được ghi ở đầu file. Nó nằm ở tầng
-/// Presentation vì đúng nơi này mới biết người dùng đang **nhìn thấy** gì — chip
-/// nào đang bật, nhóm phán quyết nào đang chọn — trong khi tầng Application chỉ
-/// biết bộ tiêu chí đã được dịch sang ngôn ngữ truy vấn.
+/// [criteriaLines] là bản **xem trước** các tiêu chí, hiện trong dialog trước khi
+/// người dùng bấm xuất. Nó nằm ở tầng Presentation vì đúng nơi này mới biết người
+/// dùng đang **nhìn thấy** gì — chip nào đang bật, nhóm phán quyết nào đang chọn.
+///
+/// Phần đầu file thật sự do `ExportDatasetUseCase` tự dựng từ chính bộ tiêu chí
+/// nó chạy, chứ không nhận chuỗi từ đây: một danh sách chữ đi kèm có thể lệch
+/// khỏi truy vấn thực sự mà không có gì báo. Hai bên vì thế phải nói cùng một
+/// điều — thêm tiêu chí mới thì sửa cả hai.
 sealed class ExportSource {
   const ExportSource();
 
@@ -27,14 +31,6 @@ sealed class ExportSource {
   List<String> get criteriaLines;
 
   ExportRequest toRequest(ExportFormat format);
-
-  /// Có tiêu chí nào **không** đi được vào file xuất hay không.
-  ///
-  /// Xem [ExportTransactionsSource.unexportableContextLines] để biết vì sao điều
-  /// này có thể xảy ra và nó có nghĩa gì.
-  List<String> get unexportableContextLines => const <String>[];
-
-  bool get hasUnexportableContext => unexportableContextLines.isNotEmpty;
 }
 
 /// Xuất danh sách giao dịch đang xem (UC-04, UC-06, UC-07 → UC-11).
@@ -62,33 +58,14 @@ final class ExportTransactionsSource extends ExportSource {
       ? const <String>['No filter applied.']
       : <String>[for (final chip in chips) chip.label];
 
-  /// Bộ lọc gửi xuống use case, đã được ngữ cảnh thu hẹp bằng những tiêu chí
-  /// thật sự có ở tầng dưới.
+  /// Bộ lọc gửi xuống use case, đã gộp cả ngữ cảnh.
+  ///
+  /// Đây là **cùng một** bộ tiêu chí mà danh sách đang hiển thị dùng, nên file
+  /// xuất không bao giờ rộng hơn thứ người dùng vừa nhìn, và [criteriaLines] ghi
+  /// ở đầu file mô tả đúng tập dữ liệu bên dưới nó (UC-11).
   @override
   ExportRequest toRequest(ExportFormat format) =>
       ExportTransactions(filter: context.narrow(filter), format: format);
-
-  /// Tiêu chí đang bật trên màn hình nhưng **không** đi được vào file xuất.
-  ///
-  /// `TransactionFilter` không có trường cho "thuộc lượt nhập nào" và "bỏ giao
-  /// dịch nội bộ đã đối soát", nên hai Context Chip ấy chỉ thu hẹp được trong bộ
-  /// nhớ, ở màn hình. File xuất thì do tầng Application đọc thẳng từ cơ sở dữ
-  /// liệu bằng chính bộ lọc này — nó không đi qua lớp lọc kia, nên nó sẽ **rộng
-  /// hơn** thứ đang hiển thị, và phần đầu file cũng không nhắc tới hai tiêu chí
-  /// đó.
-  ///
-  /// Điều duy nhất tầng này làm được là **nói ra**: dialog hiện cảnh báo, người
-  /// dùng biết trước và tự quyết. Giấu đi thì họ nhận về một file rộng hơn thứ
-  /// họ vừa nhìn, mà không có gì trong file nói cho họ biết.
-  ///
-  /// Chỗ sửa nằm ở tầng dưới: thêm `importFileRecordId` và
-  /// `excludeInternalTransfers` vào `TransactionFilter` — khi đó cả phần lọc lẫn
-  /// phần đầu file tự đúng, và toàn bộ ghi chú này biến mất.
-  @override
-  List<String> get unexportableContextLines => <String>[
-    if (context.filtersByImport) 'Import: ${context.importFileName ?? ''}',
-    if (context.excludeInternalTransfers) 'Excluding internal transfers',
-  ];
 }
 
 /// Xuất kết quả đối soát (UC-09 → UC-11).

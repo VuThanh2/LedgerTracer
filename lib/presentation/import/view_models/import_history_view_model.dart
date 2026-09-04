@@ -15,7 +15,6 @@ import '../../transactions/view_models/transaction_context.dart';
 final class ImportFileRecordViewModel {
   const ImportFileRecordViewModel({
     required this.recordId,
-    required this.accountId,
     required this.fileName,
     required this.accountName,
     required this.statusLabel,
@@ -33,7 +32,6 @@ final class ImportFileRecordViewModel {
     required String accountName,
   }) => ImportFileRecordViewModel(
     recordId: record.recordId!,
-    accountId: record.accountId,
     fileName: record.fileName,
     accountName: accountName,
     statusLabel: _labelOf(record.status),
@@ -49,10 +47,6 @@ final class ImportFileRecordViewModel {
   );
 
   final int recordId;
-
-  /// Tài khoản đích — đi kèm khi mở danh sách giao dịch của file này, để lọc
-  /// theo lượt nhập thu hẹp được trước ở cơ sở dữ liệu (UC-03 → UC-04).
-  final int accountId;
 
   final String fileName;
   final String accountName;
@@ -77,15 +71,13 @@ final class ImportFileRecordViewModel {
   /// (UC-03 → UC-04).
   ///
   /// Phép dựng nằm ở đây chứ không ở giao diện, cùng lý do với khoan xuống ở màn
-  /// hình thống kê: ngữ cảnh có ba mảnh — định danh bản ghi, tên file để dựng
-  /// chip, và tài khoản để thu hẹp trước ở cơ sở dữ liệu — và chỗ nào ghép tay
-  /// cũng có thể quên mảnh thứ ba, thứ không làm sai kết quả nhưng biến một truy
-  /// vấn có chỉ mục thành một lượt quét cả bảng.
+  /// hình thống kê: ngữ cảnh gồm định danh bản ghi (tiêu chí thật, đi xuống tận
+  /// mệnh đề `WHERE`) và tên file (chỉ để dựng nhãn chip). Ghép tay ở từng chỗ
+  /// gọi là mở đường cho một chip nói tên file này mà lọc theo file khác.
   OpenTransactions toNavigationIntent() => OpenTransactions(
     context: TransactionContext.fromImport(
       recordId: recordId,
       fileName: fileName,
-      accountId: accountId,
     ),
   );
 

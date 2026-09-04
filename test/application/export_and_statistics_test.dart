@@ -143,6 +143,46 @@ void main() {
       expect(content, contains('Date range'));
     });
 
+    test(
+      'ngữ cảnh của màn hình nguồn vừa thu hẹp dữ liệu vừa được ghi ở đầu file',
+      () async {
+        // Đây là bất biến của UC-11: file xuất phải trùng tập dữ liệu người dùng
+        // đang nhìn, và phần đầu file phải nói ra **mọi** tiêu chí đã áp. Một
+        // tiêu chí có tác dụng mà không được nhắc tới còn tệ hơn không có phần
+        // đầu file: người nhận tưởng đây là toàn bộ dữ liệu.
+        final out = await tx(description: 'CK noi bo');
+        final into = await tx(
+          account: accountB,
+          record: recordB,
+          amount: 500000,
+        );
+        await seed.pair(outgoingId: out, incomingId: into, confirmed: true);
+        await tx(day: 20, description: 'Tra no');
+        // Thuộc lượt nhập khác, nên phải bị loại.
+        await tx(account: accountB, record: recordB, day: 21);
+
+        final result = await exportDataset.execute(
+          ExportDatasetRequest(
+            dataset: ExportTransactions(
+              filter: TransactionFilter(
+                importFileRecordId: recordA,
+                excludeInternalTransfers: true,
+              ),
+              format: ExportFormat.csv,
+            ),
+          ),
+        );
+
+        // Còn đúng dòng "Tra no": dòng nội bộ đã xác nhận bị loại, dòng của
+        // lượt nhập khác cũng vậy.
+        expect(result.valueOrNull!.rowCount, 1);
+        final content = contentOf(result.valueOrNull!);
+        expect(content, contains('Import run'));
+        expect(content, contains('Excluding internal transfers'));
+        expect(content, isNot(contains('No filter applied')));
+      },
+    );
+
     test('nói rõ khi không có bộ lọc nào', () async {
       await tx();
       final result = await exportDataset.execute(

@@ -92,7 +92,6 @@ void main() {
 
       expect(state.rows, hasLength(3));
       expect(state.totalCount, 3);
-      expect(state.isCountExact, isTrue);
       expect(state.hasMore, isFalse);
       expect(state.chips, isEmpty);
       // Tên tài khoản phải có mặt: danh sách gộp mọi tài khoản nên thiếu nó là
@@ -157,7 +156,6 @@ void main() {
             context: TransactionContext.fromImport(
               recordId: recordA1,
               fileName: 'thang-01.csv',
-              accountId: accountA,
             ),
           ),
         );
@@ -168,11 +166,9 @@ void main() {
           state.chips.map((chip) => chip.kind),
           contains(FilterChipKind.importFile),
         );
-        // Phép đếm chạy ở cơ sở dữ liệu, trước khi ngữ cảnh lọc trong bộ nhớ,
-        // nên nó là cận trên — và trạng thái phải nói ra điều đó thay vì hiển
-        // thị một con số sai.
-        expect(state.isCountExact, isFalse);
-        expect(state.totalCount, greaterThanOrEqualTo(state.rows.length));
+        // Ngữ cảnh đi xuống cùng truy vấn với bộ lọc, nên phép đếm nói đúng
+        // con số đang hiển thị chứ không phải một cận trên.
+        expect(state.totalCount, 1);
       },
     );
 
@@ -208,7 +204,7 @@ void main() {
 
         expect(state.rows, hasLength(1));
         expect(state.rows.single.isReconciled, isFalse);
-        expect(state.isCountExact, isFalse);
+        expect(state.totalCount, 1);
       },
     );
 
@@ -250,7 +246,6 @@ void main() {
           context: TransactionContext.fromImport(
             recordId: recordA1,
             fileName: 'thang-01.csv',
-            accountId: accountA,
           ),
         ),
       );
@@ -261,7 +256,7 @@ void main() {
       final state = await bloc.stream.firstWhere(
         (state) => state.status.isReady && state.rows.length == 2,
       );
-      expect(state.isCountExact, isTrue);
+      expect(state.totalCount, 2);
       expect(state.chips, isEmpty);
     });
   });

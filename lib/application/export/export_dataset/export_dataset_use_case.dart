@@ -160,7 +160,10 @@ final class ExportDatasetUseCase {
     }
 
     return ExportTable(
-      metadata: <String>[..._filterMetadata(request, names), _notEncryptedNote],
+      metadata: <String>[
+        ...await _filterMetadata(request, names),
+        _notEncryptedNote,
+      ],
       headers: const <String>[
         'Booking date',
         'Account',
@@ -333,11 +336,24 @@ final class ExportDatasetUseCase {
     );
   }
 
-  List<String> _filterMetadata(
+  /// Các tiêu chí đã áp, viết ra đầu file.
+  ///
+  /// Phải liệt kê **đủ** mọi trường của [TransactionFilter]: người nhận file chỉ
+  /// có mấy dòng này để biết mình đang cầm tập dữ liệu nào, và một tiêu chí có
+  /// tác dụng mà không được nhắc tới còn tệ hơn không có phần đầu file — họ sẽ
+  /// tưởng đây là toàn bộ dữ liệu. Thêm trường mới vào bộ lọc thì phải thêm dòng
+  /// ở đây cùng lúc.
+  Future<List<String>> _filterMetadata(
     ExportTransactions request,
     Map<int, String> names,
-  ) {
+  ) async {
     final filter = request.filter;
+    // Tên file thay cho định danh bản ghi: con số nội bộ không nói gì với người
+    // mở file ra đọc.
+    final recordId = filter.importFileRecordId;
+    final record = recordId == null
+        ? null
+        : await _imports.findFileRecordById(recordId);
     return <String>[
       if (filter.keyword != null) 'Keyword: ${filter.keyword}',
       if (filter.accountId != null)
@@ -345,6 +361,8 @@ final class ExportDatasetUseCase {
       if (filter.dateRange != null) 'Date range: ${filter.dateRange}',
       if (filter.amountRange != null) 'Amount range: ${filter.amountRange}',
       if (filter.currency != null) 'Currency: ${filter.currency!.code}',
+      if (recordId != null) 'Import run: ${record?.fileName ?? '#$recordId'}',
+      if (filter.excludeInternalTransfers) 'Excluding internal transfers',
       if (filter.isEmpty) 'No filter applied.',
     ];
   }

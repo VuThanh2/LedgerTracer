@@ -217,11 +217,29 @@ final class FakeTransactionRepository implements TransactionRepository {
 
   @override
   Future<int> count(TransactionFilter filter) async =>
-      _all.where(filter.matches).length;
+      _all.where((tx) => _matches(filter, tx)).length;
 
   @override
   Future<int> countByAccountId(int accountId) async =>
       _all.where((tx) => tx.accountId == accountId).length;
+
+  @override
+  Future<int> countAccountsWithTransactions() async =>
+      _all.map((tx) => tx.accountId).toSet().length;
+
+  /// Áp bộ lọc đúng như cổng lưu trữ thật.
+  ///
+  /// `excludeInternalTransfers` nói về một quan hệ mà bản thân [Transaction]
+  /// không mang, nên nó phải được tra ở đây — bản giả bỏ qua nó sẽ để lọt đúng
+  /// loại lỗi mà tiêu chí ấy sinh ra.
+  bool _matches(TransactionFilter filter, Transaction tx) => filter.matches(
+        tx,
+        isReconciled: _db.pairRows.values.any(
+          (pair) =>
+              pair.isConfirmed &&
+              pair.transactionIds.contains(tx.transactionId),
+        ),
+      );
 
   @override
   Future<Map<Fingerprint, int>> countByFingerprint({
@@ -290,7 +308,7 @@ final class FakeTransactionRepository implements TransactionRepository {
     required int offset,
   }) async {
     requestedPageSizes.add(limit);
-    final matching = _sorted(_all.where(filter.matches));
+    final matching = _sorted(_all.where((tx) => _matches(filter, tx)));
     if (offset >= matching.length) return const <Transaction>[];
     return matching.skip(offset).take(limit).toList(growable: false);
   }

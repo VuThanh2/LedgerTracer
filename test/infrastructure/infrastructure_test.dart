@@ -247,6 +247,100 @@ void main() {
       expect(await transactions.findByIds(<int>[ids[1], ids[0]]), hasLength(2));
     });
 
+    test(
+      'narrows by import run and by confirmed pair, and counts the accounts '
+      'that actually hold rows',
+      () async {
+        final a = await accounts.add(
+          BankAccount.create(displayName: 'A', createdAt: now),
+        );
+        final b = await accounts.add(
+          BankAccount.create(displayName: 'B', createdAt: now),
+        );
+        // Tài khoản thứ ba đã khai báo nhưng chưa có dòng nào: nó là đúng thứ
+        // phân biệt "tài khoản có tên" với "tài khoản có dữ liệu" (UC-08).
+        await accounts.add(
+          BankAccount.create(displayName: 'C', createdAt: now),
+        );
+
+        final recordA1 = await seedRecord(a.accountId!);
+        final recordA2 = await seedRecord(a.accountId!, order: 1);
+        final recordB = await seedRecord(b.accountId!, order: 2);
+
+        final ids = await transactions.addAll(<Transaction>[
+          tx(
+            accountId: a.accountId!,
+            recordId: recordA1,
+            date: DateTime.utc(2025, 3, 1),
+            amount: -2000000,
+            description: 'Chuyen sang B',
+          ),
+          tx(
+            accountId: b.accountId!,
+            recordId: recordB,
+            date: DateTime.utc(2025, 3, 1),
+            amount: 2000000,
+            description: 'Nhan tu A',
+          ),
+          tx(
+            accountId: a.accountId!,
+            recordId: recordA2,
+            date: DateTime.utc(2025, 3, 2),
+            amount: -50000,
+            description: 'Ca phe',
+          ),
+        ]);
+
+        // Lượt nhập là một tiêu chí thật, nên `count` và `findPage` thấy cùng
+        // một tập — đó là điều kiện để con số trên màn hình và file xuất khớp.
+        final byRun = TransactionFilter(importFileRecordId: recordA1);
+        expect(await transactions.count(byRun), 1);
+        expect(
+          (await transactions.findPage(filter: byRun, limit: 10, offset: 0))
+              .single
+              .importFileRecordId,
+          recordA1,
+        );
+
+        // Cặp mới chỉ **gợi ý** chưa có hiệu lực nghiệp vụ nào, nên chưa loại
+        // dòng nào cả (Rule – Suggested Is Not Confirmed).
+        final excluding = TransactionFilter(excludeInternalTransfers: true);
+        await reconciliation.addPairs(<ReconciliationPair>[
+          ReconciliationPair.suggested(
+            outgoingTransactionId: ids[0],
+            incomingTransactionId: ids[1],
+            createdAt: now,
+          ),
+        ]);
+        expect(await transactions.count(excluding), 3);
+
+        final pair = await reconciliation.findPairInvolving(ids[0]);
+        await reconciliation.updatePair(pair!.confirm(now));
+        expect(await transactions.count(excluding), 1);
+        expect(
+          (await transactions.findPage(filter: excluding, limit: 10, offset: 0))
+              .single
+              .description,
+          'Ca phe',
+        );
+
+        // Hai tiêu chí kết hợp theo VÀ như mọi tiêu chí khác.
+        expect(
+          await transactions.count(
+            TransactionFilter(
+              importFileRecordId: recordA1,
+              excludeInternalTransfers: true,
+            ),
+          ),
+          0,
+        );
+
+        // Ba tài khoản đã khai báo, hai tài khoản có giao dịch.
+        expect(await accounts.findAll(), hasLength(3));
+        expect(await transactions.countAccountsWithTransactions(), 2);
+      },
+    );
+
     test('aggregates cash flow by period and account', () async {
       final a = await accounts.add(
         BankAccount.create(displayName: 'A', createdAt: now),

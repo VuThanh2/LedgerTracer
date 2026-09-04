@@ -25,6 +25,8 @@ final class TransactionFilter {
     DateRange? dateRange,
     AmountRange? amountRange,
     Currency? currency,
+    int? importFileRecordId,
+    bool excludeInternalTransfers = false,
   }) {
     if (amountRange != null &&
         currency != null &&
@@ -37,6 +39,8 @@ final class TransactionFilter {
       dateRange: dateRange,
       amountRange: amountRange,
       currency: currency ?? amountRange?.currency,
+      importFileRecordId: importFileRecordId,
+      excludeInternalTransfers: excludeInternalTransfers,
     );
   }
 
@@ -46,6 +50,8 @@ final class TransactionFilter {
     required this.dateRange,
     required this.amountRange,
     required this.currency,
+    required this.importFileRecordId,
+    required this.excludeInternalTransfers,
   });
 
   /// Lấy tất cả, sắp theo ngày ghi nhận — danh sách mặc định của UC-04.
@@ -55,6 +61,8 @@ final class TransactionFilter {
     dateRange: null,
     amountRange: null,
     currency: null,
+    importFileRecordId: null,
+    excludeInternalTransfers: false,
   );
 
   final SearchText? keyword;
@@ -63,16 +71,38 @@ final class TransactionFilter {
   final AmountRange? amountRange;
   final Currency? currency;
 
+  /// Chỉ giữ giao dịch do **một lượt nhập** ghi ra (UC-03 → UC-04).
+  ///
+  /// Là tiêu chí thật chứ không phải một lớp lọc ở màn hình: có nó thì danh
+  /// sách, phép đếm và file xuất cùng thấy một tập, và con số tổng vẫn là con số
+  /// đúng. Cột `import_file_record_id` có chỉ mục nên nó cũng rẻ.
+  final int? importFileRecordId;
+
+  /// Bỏ các giao dịch thuộc một cặp đối soát **đã xác nhận** (UC-10 → UC-04).
+  ///
+  /// Chỉ cặp đã xác nhận mới bị loại: một gợi ý chưa mang hiệu lực nghiệp vụ nào
+  /// (Rule – Suggested Is Not Confirmed). Đây là cùng một điều kiện mà
+  /// [TransactionRepository.aggregateByPeriod] dùng, nên khoan xuống từ một cột
+  /// của biểu đồ cho ra đúng tập dòng đã tạo nên cột ấy.
+  final bool excludeInternalTransfers;
+
   bool get isEmpty =>
       keyword == null &&
       accountId == null &&
       dateRange == null &&
       amountRange == null &&
-      currency == null;
+      currency == null &&
+      importFileRecordId == null &&
+      !excludeInternalTransfers;
 
   /// Bản trong bộ nhớ của chính điều kiện đó, để kiểm một giao dịch vừa ghi có
   /// khớp bộ lọc đang bật hay không mà không cần hỏi lại cơ sở dữ liệu.
-  bool matches(Transaction transaction) {
+  ///
+  /// [isReconciled] phải được truyền vào vì [excludeInternalTransfers] nói về
+  /// một **quan hệ** mà bản thân [Transaction] không mang: có cặp đã xác nhận
+  /// nào chứa nó hay không. Mặc định `false` giữ nguyên nghĩa cũ cho những chỗ
+  /// gọi không bật cờ ấy.
+  bool matches(Transaction transaction, {bool isReconciled = false}) {
     final activeKeyword = keyword;
     final activeRange = dateRange;
     final activeAmounts = amountRange;
@@ -84,7 +114,10 @@ final class TransactionFilter {
             activeRange.contains(transaction.bookingDate)) &&
         (activeAmounts == null || activeAmounts.contains(transaction.amount)) &&
         (activeCurrency == null ||
-            transaction.amount.currency == activeCurrency);
+            transaction.amount.currency == activeCurrency) &&
+        (importFileRecordId == null ||
+            transaction.importFileRecordId == importFileRecordId) &&
+        (!excludeInternalTransfers || !isReconciled);
   }
 }
 
@@ -209,6 +242,18 @@ abstract interface class TransactionRepository {
   /// Tài khoản này đang có bao nhiêu dòng — con số cho hộp thoại xác nhận xoá
   /// tài khoản (UC-01).
   Future<int> countByAccountId(int accountId);
+
+  /// Có bao nhiêu tài khoản **thật sự có giao dịch**.
+  ///
+  /// Khác với số tài khoản đã khai báo: đối soát ghép cặp giữa hai tài khoản
+  /// khác nhau, nên tiền điều kiện của UC-08 nói về tài khoản có dữ liệu, không
+  /// phải tài khoản có tên. Cùng con số ấy quyết định Zero-effect Notice ở UC-10
+  /// dẫn người dùng sang Nhập hay sang Đối soát.
+  ///
+  /// Là một phép đếm riêng chứ không suy ra từ các phép gom nhóm: gom nhóm luôn
+  /// đi kèm một loại tiền, nên suy ra sẽ tốn một truy vấn cho **mỗi** loại tiền
+  /// và vẫn còn phải hợp các tập lại trong bộ nhớ.
+  Future<int> countAccountsWithTransactions();
 
   /// Xoá những gì một file đã ghi và trả về số dòng đã mất (UC-03). Xoá vật lý,
   /// không tombstone.
