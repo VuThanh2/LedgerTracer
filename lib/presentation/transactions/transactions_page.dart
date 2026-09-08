@@ -307,20 +307,15 @@ class _SearchHeader extends StatelessWidget {
     );
   }
 
-  /// Nói rõ khi con số chỉ là cận trên.
+  /// "Đã tải / tổng khớp".
   ///
-  /// Hai Context Chip còn lọc trong bộ nhớ, nên phép đếm ở cơ sở dữ liệu không
-  /// biết chúng. Một con số tròn trịa mà sai là tệ hơn một con số kèm chữ "tối
-  /// đa": người dùng ở đây đối chiếu sổ sách, họ sẽ đem con số đó đi so.
+  /// Cả hai con số nói về cùng một tập, vì bộ lọc lẫn ngữ cảnh cùng đi xuống một
+  /// truy vấn — người dùng ở đây đối chiếu sổ sách và sẽ đem con số này đi so,
+  /// nên nó phải là con số đúng chứ không phải một ước lượng.
   static String _countLabelOf(TransactionsState state) {
-    final loaded = NumberFormatter.count(state.visibleCount);
     if (!state.status.isReady) return 'Loading…';
-    if (state.isCountExact) {
-      return '$loaded / ${NumberFormatter.count(state.totalCount)} '
-          'transactions';
-    }
-    return '$loaded shown · at most '
-        '${NumberFormatter.count(state.totalCount)} before the context filter';
+    return '${NumberFormatter.count(state.visibleCount)} / '
+        '${NumberFormatter.count(state.totalCount)} transactions';
   }
 }
 

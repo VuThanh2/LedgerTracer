@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../app/theme.dart';
+import '../../domain/value_objects/pair_status.dart';
 import '../shared/bloc/load_status.dart';
 import '../shared/failures/feedback_message.dart';
 import '../shared/widgets/banner_message.dart';
@@ -77,7 +78,8 @@ class TransactionDetailPage extends StatelessWidget {
                   onDelete: () => context.read<TransactionsBloc>().add(
                     TransactionDeleteRequested(value.transactionId),
                   ),
-                  onOpenReconciliation: () => _openReconciliation(context),
+                  onOpenReconciliation: () =>
+                      _openReconciliation(context, value.confirmedPairId),
                 ),
             },
           );
@@ -95,14 +97,16 @@ class TransactionDetailPage extends StatelessWidget {
     }
   }
 
-  /// Quay về khung ứng dụng rồi chuyển sang tab Đối soát.
+  /// Quay về khung ứng dụng rồi chuyển sang tab Đối soát, mở sẵn đúng cặp.
   ///
-  /// Cặp cụ thể chưa mở sẵn được: tầng dưới chưa có đường đọc "cặp nào chứa giao
-  /// dịch X", nên `focusPairId` để trống và người dùng tới đúng nhóm chứ chưa
-  /// tới đúng dòng.
-  void _openReconciliation(BuildContext context) {
+  /// Nút này chỉ hiện khi giao dịch thuộc một cặp **đã xác nhận**, nên nhóm mở
+  /// sẵn luôn là *Đã xác nhận* — mở đúng cặp ở một nhóm không chứa nó thì người
+  /// dùng nhìn vào một danh sách rỗng.
+  void _openReconciliation(BuildContext context, int? pairId) {
     context.read<AppShellBloc>().add(
-      const AppShellNavigationRequested(OpenReconciliation()),
+      AppShellNavigationRequested(
+        OpenReconciliation(focusPairId: pairId, status: PairStatus.confirmed),
+      ),
     );
     Navigator.of(context).popUntil((route) => route.isFirst);
   }

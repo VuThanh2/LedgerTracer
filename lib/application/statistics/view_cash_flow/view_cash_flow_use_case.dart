@@ -63,6 +63,16 @@ final class ViewCashFlowUseCase {
   Future<Result<List<CurrencyUsage>>> availableCurrencies() =>
       Result.guardAsync(_transactions.currencyUsage, onError: failureFromError);
 
+  /// Có bao nhiêu tài khoản **thật sự có giao dịch** — tiền điều kiện của UC-08
+  /// và là thứ quyết định Zero-effect Notice của UC-10 dẫn đi đâu.
+  ///
+  /// Khác với số tài khoản đã khai báo: một tài khoản vừa tạo mà chưa nhập file
+  /// nào thì đối soát không có gì để ghép với nó.
+  Future<Result<int>> accountsWithTransactions() => Result.guardAsync(
+    _transactions.countAccountsWithTransactions,
+    onError: failureFromError,
+  );
+
   Future<Map<int, String>> _accountNames() async {
     final accounts = await _accounts.findAll();
     return <int, String>{

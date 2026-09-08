@@ -56,7 +56,7 @@ final class TransactionsState {
     this.chips = const <FilterChipViewModel>[],
     this.accountNames = const <int, String>{},
     this.currencies = const <CurrencyUsage>[],
-    this.scannedCount = 0,
+    this.loadedCount = 0,
     this.totalCount = 0,
     this.hasMore = false,
     this.isLoadingMore = false,
@@ -98,14 +98,11 @@ final class TransactionsState {
   /// Các loại tiền đang có, nhiều giao dịch nhất trước (UC-07).
   final List<CurrencyUsage> currencies;
 
-  /// Số dòng đã **đọc lên từ cơ sở dữ liệu**, kể cả dòng bị ngữ cảnh loại ra.
-  /// Đây là offset của trang kế tiếp.
-  final int scannedCount;
+  /// Số dòng đã đọc lên từ cơ sở dữ liệu — offset của trang kế tiếp.
+  final int loadedCount;
 
-  /// Số dòng khớp [filter] ở cơ sở dữ liệu.
-  ///
-  /// Khi ngữ cảnh còn thu hẹp thêm trong bộ nhớ thì đây là **cận trên** chứ
-  /// không phải con số thật — xem [isCountExact].
+  /// Số dòng khớp toàn bộ tiêu chí đang áp — cả bộ lọc lẫn ngữ cảnh, vì cả hai
+  /// đi xuống cùng một truy vấn. Là con số đúng, không phải cận trên.
   final int totalCount;
 
   final bool hasMore;
@@ -126,14 +123,6 @@ final class TransactionsState {
   /// Lỗi của lần đọc danh sách gần nhất. Dữ liệu cũ vẫn còn trong [rows] để màn
   /// hình không trắng xoá.
   final FeedbackMessage? loadError;
-
-  /// [totalCount] có phải con số đúng của thứ đang hiển thị hay không.
-  ///
-  /// Sai khi Context Chip còn phải lọc trong bộ nhớ, vì phép đếm chạy ở cơ sở dữ
-  /// liệu và không biết tới ngữ cảnh. Vì phép lọc trong bộ nhớ chỉ **bớt** đi, đây
-  /// là cận trên: giao diện đọc cờ này để hiển thị "tối đa N" thay vì một con
-  /// số nói dối.
-  bool get isCountExact => !context.narrowsInMemory;
 
   /// Số dòng thật sự đang hiển thị.
   int get visibleCount => rows.length;
@@ -157,7 +146,7 @@ final class TransactionsState {
     List<FilterChipViewModel>? chips,
     Map<int, String>? accountNames,
     List<CurrencyUsage>? currencies,
-    int? scannedCount,
+    int? loadedCount,
     int? totalCount,
     bool? hasMore,
     bool? isLoadingMore,
@@ -182,7 +171,7 @@ final class TransactionsState {
     chips: chips ?? this.chips,
     accountNames: accountNames ?? this.accountNames,
     currencies: currencies ?? this.currencies,
-    scannedCount: scannedCount ?? this.scannedCount,
+    loadedCount: loadedCount ?? this.loadedCount,
     totalCount: totalCount ?? this.totalCount,
     hasMore: hasMore ?? this.hasMore,
     isLoadingMore: isLoadingMore ?? this.isLoadingMore,

@@ -73,6 +73,21 @@ final class QueryTransactionsUseCase {
     onError: failureFromError,
   );
 
+  /// Cặp **đã xác nhận** đang chứa giao dịch này, nếu có (UC-04 bước 4 → UC-09).
+  ///
+  /// Trả định danh chứ không trả `bool`: màn hình chi tiết cần cả hai điều — chỉ
+  /// báo "đã đối soát" *và* đường mở thẳng tới đúng cặp — và hai lời gọi cho
+  /// cùng một sự thật là hai lời gọi sẽ lệch nhau khi dữ liệu đổi giữa chúng.
+  ///
+  /// `null` bao gồm cả trường hợp giao dịch đang thuộc một cặp mới chỉ là **gợi
+  /// ý**: gợi ý chưa mang hiệu lực nghiệp vụ nào nên chưa phải "đã đối soát"
+  /// (Rule – Suggested Is Not Confirmed).
+  Future<Result<int?>> findConfirmedPairId(int transactionId) =>
+      Result.guardAsync(() async {
+        final pair = await _reconciliation.findPairInvolving(transactionId);
+        return pair != null && pair.isConfirmed ? pair.pairId : null;
+      }, onError: failureFromError);
+
   Future<Map<int, String>> _accountNames() async {
     final accounts = await _accounts.findAll();
     return <int, String>{

@@ -70,10 +70,6 @@ class ExportDialog extends StatelessWidget {
                   _FormatChoice(state: state),
                   const SizedBox(height: Gap.lg),
                   _CriteriaBox(source: source),
-                  if (source.hasUnexportableContext) ...<Widget>[
-                    const SizedBox(height: Gap.md),
-                    BannerMessage(_unexportableWarning(source)),
-                  ],
                   const SizedBox(height: Gap.md),
                   const BannerMessage(ExportState.notEncryptedWarning),
                   if (state.isRunning) ...<Widget>[
@@ -120,13 +116,6 @@ class ExportDialog extends StatelessWidget {
       },
     );
   }
-
-  static FeedbackMessage _unexportableWarning(ExportSource source) =>
-      FeedbackMessage.warning(
-        'The context criteria below do not reach the query yet, so the export '
-        'will be wider than the list you are looking at: '
-        '${source.unexportableContextLines.join(' · ')}.',
-      );
 
   static String _progressLabelOf(ExportState state) {
     final total = state.total;

@@ -168,51 +168,55 @@ void main() {
   });
 
   group('ngữ cảnh thu hẹp danh sách', () {
-    test('ngữ cảnh lượt nhập thu hẹp trước bằng tài khoản của file', () {
+    test('ngữ cảnh lượt nhập đi thẳng vào bộ tiêu chí gửi xuống', () {
       const context = TransactionContext.fromImport(
         recordId: 4,
         fileName: 'thang-01.csv',
-        accountId: 9,
       );
-      expect(context.narrow(TransactionFilter.none).accountId, 9);
+      expect(context.narrow(TransactionFilter.none).importFileRecordId, 4);
     });
 
-    test('bộ lọc tài khoản do người dùng đặt được ưu tiên', () {
-      // Chip tài khoản đang hiển thị là của người dùng; ghi đè nó bằng tài khoản
-      // suy ra từ ngữ cảnh sẽ làm chip đó nói dối. Hai bên chỏi nhau thì kết quả
-      // rỗng — và đó là câu trả lời đúng.
+    test('ngữ cảnh không ghi đè tiêu chí nào của người dùng', () {
+      // Chip tài khoản đang hiển thị là của người dùng. Ngữ cảnh chỉ **thêm**
+      // tiêu chí của nó, nên chip không bao giờ nói một đằng còn truy vấn chạy
+      // một nẻo.
       const context = TransactionContext.fromImport(
         recordId: 4,
         fileName: 'thang-01.csv',
-        accountId: 9,
       );
       final narrowed = context.narrow(TransactionFilter(accountId: 3));
       expect(narrowed.accountId, 3);
+      expect(narrowed.importFileRecordId, 4);
+    });
+
+    test('công tắc loại trừ của Thống kê đi xuống nguyên vẹn', () {
+      const context = TransactionContext.fromStatistics(
+        excludeInternalTransfers: true,
+      );
+      expect(
+        context.narrow(TransactionFilter.none).excludeInternalTransfers,
+        isTrue,
+      );
     });
 
     test('xoá từng chip ngữ cảnh một, không xoá lây', () {
       const both = TransactionContext(
         importFileRecordId: 4,
         importFileName: 'thang-01.csv',
-        importAccountId: 9,
         excludeInternalTransfers: true,
       );
       expect(both.withoutImport().filtersByImport, isFalse);
       expect(both.withoutImport().excludeInternalTransfers, isTrue);
       expect(both.withoutInternalExclusion().filtersByImport, isTrue);
-      expect(
-        both.withoutInternalExclusion().excludeInternalTransfers,
-        isFalse,
-      );
+      expect(both.withoutInternalExclusion().excludeInternalTransfers, isFalse);
     });
   });
 
-  group('Export Dialog nói đúng thứ nó xuất được (UC-11)', () {
-    test('chip ngữ cảnh được nêu là **không** đi vào file xuất', () {
+  group('Export Dialog xuất đúng thứ đang hiển thị (UC-11)', () {
+    test('chip ngữ cảnh đi vào chính bộ tiêu chí của file xuất', () {
       const context = TransactionContext(
         importFileRecordId: 4,
         importFileName: 'thang-01.csv',
-        importAccountId: 9,
         excludeInternalTransfers: true,
       );
       final source = ExportTransactionsSource(
@@ -225,23 +229,28 @@ void main() {
         ),
       );
 
-      // Hai tiêu chí chỉ lọc được trong bộ nhớ, nên file xuất sẽ rộng hơn thứ
-      // đang hiển thị. Giấu đi thì người dùng nhận về một file rộng hơn mà không
-      // có gì trong đó nói cho họ biết.
-      expect(source.hasUnexportableContext, isTrue);
-      expect(source.unexportableContextLines, hasLength(2));
-      // Bộ lọc gửi xuống vẫn được thu hẹp bằng những gì tầng dưới hiểu được.
+      // Đây là bất biến của UC-11: file xuất không được rộng hơn danh sách
+      // người dùng vừa nhìn, và phần đầu file phải mô tả đúng tập bên dưới nó.
       final request = source.toRequest(ExportFormat.csv) as ExportTransactions;
-      expect(request.filter.accountId, 9);
+      expect(request.filter.importFileRecordId, 4);
+      expect(request.filter.excludeInternalTransfers, isTrue);
+      expect(source.criteriaLines, hasLength(source.chips.length));
     });
 
-    test('không có chip ngữ cảnh thì không có cảnh báo nào', () {
+    test('không có tiêu chí nào thì phần đầu file nói đúng như vậy', () {
       const source = ExportTransactionsSource(
         filter: TransactionFilter.none,
         context: TransactionContext.none,
         chips: <FilterChipViewModel>[],
       );
-      expect(source.hasUnexportableContext, isFalse);
+      expect(
+        source.toRequest(ExportFormat.csv),
+        isA<ExportTransactions>().having(
+          (request) => request.filter.isEmpty,
+          'filter.isEmpty',
+          isTrue,
+        ),
+      );
       expect(source.criteriaLines, <String>['No filter applied.']);
     });
   });

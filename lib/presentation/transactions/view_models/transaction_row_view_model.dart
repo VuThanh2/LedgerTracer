@@ -85,7 +85,7 @@ final class TransactionDetailViewModel {
     required this.amount,
     required this.counterpartyText,
     required this.descriptionText,
-    required this.isReconciled,
+    required this.confirmedPairId,
     required this.isManuallyEdited,
     required this.sourceLineText,
     required this.importedAtText,
@@ -94,7 +94,7 @@ final class TransactionDetailViewModel {
   factory TransactionDetailViewModel.of(
     Transaction tx, {
     required String accountName,
-    required bool isReconciled,
+    required int? confirmedPairId,
   }) => TransactionDetailViewModel(
     transactionId: tx.transactionId!,
     accountId: tx.accountId,
@@ -104,7 +104,7 @@ final class TransactionDetailViewModel {
     amount: tx.amount,
     counterpartyText: tx.counterpartyName ?? '',
     descriptionText: tx.description,
-    isReconciled: isReconciled,
+    confirmedPairId: confirmedPairId,
     isManuallyEdited: tx.isManuallyEdited,
     // Số thứ tự dòng trong file gốc là thứ làm cho luồng "mở file gốc ra đối
     // chiếu" khả thi, nên nó có mặt ở màn hình chi tiết (UC-04 bước 4).
@@ -123,8 +123,17 @@ final class TransactionDetailViewModel {
 
   final String counterpartyText;
   final String descriptionText;
-  final bool isReconciled;
+
+  /// Cặp đối soát **đã xác nhận** chứa giao dịch này, `null` khi không có.
+  ///
+  /// Một trường thay vì một cờ boolean: chỉ báo "đã đối soát" và liên kết mở
+  /// thẳng tới đúng cặp là cùng một sự thật, và tách làm hai là mở đường cho một
+  /// chỉ báo sáng lên mà liên kết không biết dẫn đi đâu.
+  final int? confirmedPairId;
+
   final bool isManuallyEdited;
   final String sourceLineText;
   final String importedAtText;
+
+  bool get isReconciled => confirmedPairId != null;
 }

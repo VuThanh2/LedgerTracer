@@ -78,6 +78,13 @@ final class SqliteTransactionRepository implements TransactionRepository {
     );
   }
 
+  /// `COUNT(DISTINCT account_id)` trên đúng bảng giao dịch: một lần đi xuống cơ
+  /// sở dữ liệu, không phụ thuộc số tài khoản lẫn số loại tiền.
+  @override
+  Future<int> countAccountsWithTransactions() => _db.executor.countRows(
+        'SELECT COUNT(DISTINCT account_id) FROM ${LedgerSchema.transaction}',
+      );
+
   @override
   Future<Transaction?> findById(int transactionId) async {
     final rows = await _db.executor.query(
@@ -309,17 +316,7 @@ final class SqliteTransactionRepository implements TransactionRepository {
       ]);
     }
     if (excludeInternalTransfers) {
-      // Chỉ cặp **đã xác nhận** mới bị trừ: gợi ý chưa có hiệu lực nghiệp vụ nào
-      // (Rule – Suggested Is Not Confirmed).
-      conditions.add(
-        'NOT EXISTS (SELECT 1 FROM ${LedgerSchema.reconciliationPair} pair '
-        'WHERE pair.status = ? AND ('
-        'pair.outgoing_transaction_id = '
-        '${LedgerSchema.transaction}.transaction_id '
-        'OR pair.incoming_transaction_id = '
-        '${LedgerSchema.transaction}.transaction_id))',
-        <Object?>[PairStatus.confirmed.name],
-      );
+      _addNotInConfirmedPair(conditions);
     }
 
     return _db.executor.rawQuery(
@@ -402,6 +399,37 @@ final class SqliteTransactionRepository implements TransactionRepository {
       conditions.add('currency = ?', <Object?>[currency.code]);
     }
 
+    final recordId = filter.importFileRecordId;
+    if (recordId != null) {
+      // `idx_transaction_record` phủ đúng cột này, nên xem "một lượt nhập" là
+      // một tiêu chí thật chứ không phải một lớp lọc sau khi đã đọc lên: nhờ vậy
+      // `count` và file xuất thấy cùng một tập với danh sách (UC-03 → UC-11).
+      conditions.add('import_file_record_id = ?', <Object?>[recordId]);
+    }
+
+    if (filter.excludeInternalTransfers) {
+      _addNotInConfirmedPair(conditions);
+    }
+
     return conditions;
+  }
+
+  /// "Không thuộc cặp nào **đã xác nhận**" — viết đúng một lần, dùng cho cả bộ
+  /// lọc danh sách lẫn hai phép gom nhóm của thống kê.
+  ///
+  /// Hai bản chép tay của cùng điều kiện này là đúng thứ sẽ làm biểu đồ và danh
+  /// sách khoan xuống từ nó nói hai con số khác nhau. Chỉ cặp đã xác nhận mới bị
+  /// trừ: gợi ý chưa có hiệu lực nghiệp vụ nào (Rule – Suggested Is Not
+  /// Confirmed).
+  static void _addNotInConfirmedPair(_Conditions conditions) {
+    conditions.add(
+      'NOT EXISTS (SELECT 1 FROM ${LedgerSchema.reconciliationPair} pair '
+      'WHERE pair.status = ? AND ('
+      'pair.outgoing_transaction_id = '
+      '${LedgerSchema.transaction}.transaction_id '
+      'OR pair.incoming_transaction_id = '
+      '${LedgerSchema.transaction}.transaction_id))',
+      <Object?>[PairStatus.confirmed.name],
+    );
   }
 }

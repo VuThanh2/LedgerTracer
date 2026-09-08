@@ -8,14 +8,12 @@ import '../../../core/result/failure.dart';
 import '../../../core/result/result.dart';
 import '../../../domain/entities/transaction.dart';
 import '../../../domain/repositories/transaction_repository.dart';
-import '../../../domain/value_objects/date_range.dart';
 import '../../../domain/value_objects/search_text.dart';
 import '../../shared/bloc/event_transformers.dart';
 import '../../shared/bloc/load_status.dart';
 import '../../shared/bloc/transient_notice.dart';
 import '../../shared/failures/failure_presenter.dart';
 import '../view_models/filter_chip_view_model.dart';
-import '../view_models/transaction_context.dart';
 import '../view_models/transaction_filter_draft.dart';
 import '../view_models/transaction_row_view_model.dart';
 import 'transactions_event.dart';
@@ -115,15 +113,6 @@ final class TransactionsBloc
 
   /// Đủ dày để một màn hình rộng không phải nạp thêm ngay khi mở.
   static const int defaultPageSize = 80;
-
-  /// Trần số trang được đọc liên tiếp trong **một** lần nạp khi ngữ cảnh còn lọc
-  /// trong bộ nhớ.
-  ///
-  /// Cần thiết vì một Context Chip có thể loại sạch vài trang liền — chip "Lượt
-  /// nhập" trên một tài khoản có nhiều lượt là ví dụ. Không có trần thì một lần
-  /// cuộn có thể quét cả bảng; có trần thì tệ nhất là người dùng phải cuộn thêm
-  /// một nhịp nữa, và luồng giao diện không bị giữ.
-  static const int maxScanPagesPerFetch = 8;
 
   Future<void> _onStarted(
     TransactionsStarted event,
@@ -287,8 +276,7 @@ final class TransactionsBloc
 
     final collected = await _collect(
       filter: state.context.narrow(state.filter),
-      context: state.context,
-      fromOffset: state.scannedCount,
+      fromOffset: state.loadedCount,
     );
 
     switch (collected) {
@@ -303,7 +291,7 @@ final class TransactionsBloc
         emit(
           state.copyWith(
             rows: <TransactionRowViewModel>[...state.rows, ...value.rows],
-            scannedCount: value.scannedCount,
+            loadedCount: value.loadedCount,
             totalCount: value.totalCount,
             hasMore: value.hasMore,
             isLoadingMore: false,
@@ -415,7 +403,6 @@ final class TransactionsBloc
 
     final collected = await _collect(
       filter: state.context.narrow(state.filter),
-      context: state.context,
       fromOffset: 0,
     );
 
@@ -432,7 +419,7 @@ final class TransactionsBloc
           state.copyWith(
             status: LoadStatus.ready,
             rows: value.rows,
-            scannedCount: value.scannedCount,
+            loadedCount: value.loadedCount,
             totalCount: value.totalCount,
             hasMore: value.hasMore,
             isLoadingMore: false,
@@ -441,62 +428,40 @@ final class TransactionsBloc
     }
   }
 
-  /// Đọc từ [fromOffset] cho tới khi có ít nhất một dòng qua được ngữ cảnh, hoặc
-  /// hết dữ liệu, hoặc chạm trần [maxScanPagesPerFetch].
+  /// Đọc đúng **một** trang từ [fromOffset].
   ///
-  /// Vòng lặp chỉ chạy quá một vòng khi Context Chip đang loại bớt dòng. Không
-  /// có ngữ cảnh thì đây đúng là một lần đọc một trang.
+  /// Không còn lớp lọc nào chạy sau khi đọc lên: ngữ cảnh đã được `narrow` gộp
+  /// vào chính bộ tiêu chí gửi xuống, nên mọi dòng trả về đều là dòng sẽ hiển
+  /// thị, và `totalCount` là con số đúng chứ không phải cận trên.
   Future<Result<_CollectedPage>> _collect({
     required TransactionFilter filter,
-    required TransactionContext context,
     required int fromOffset,
   }) async {
-    final rows = <TransactionRowViewModel>[];
-    var offset = fromOffset;
-    var total = 0;
-    var hasMore = false;
-
-    for (var scan = 0; scan < maxScanPagesPerFetch; scan++) {
-      final result = await _query.execute(
-        QueryTransactionsRequest(
-          filter: filter,
-          limit: pageSize,
-          offset: offset,
-        ),
-      );
-      switch (result) {
-        case Err<TransactionsPage>(:final failure):
-          return Err<_CollectedPage>(failure);
-        case Ok<TransactionsPage>(value: final page):
-          total = page.totalCount;
-          offset += page.items.length;
-          for (final item in page.items) {
-            if (context.keeps(item)) rows.add(TransactionRowViewModel.of(item));
-          }
-          // Trang ngắn hơn giới hạn là dấu hiệu chắc chắn đã hết; phép so với
-          // `total` là lưới thứ hai cho trường hợp dữ liệu đổi giữa hai trang.
-          hasMore = page.items.length == pageSize && offset < total;
-          if (!hasMore || rows.isNotEmpty) {
-            return Ok<_CollectedPage>(
-              _CollectedPage(
-                rows: rows,
-                scannedCount: offset,
-                totalCount: total,
-                hasMore: hasMore,
-              ),
-            );
-          }
-      }
-    }
-
-    return Ok<_CollectedPage>(
-      _CollectedPage(
-        rows: rows,
-        scannedCount: offset,
-        totalCount: total,
-        hasMore: hasMore,
+    final result = await _query.execute(
+      QueryTransactionsRequest(
+        filter: filter,
+        limit: pageSize,
+        offset: fromOffset,
       ),
     );
+    switch (result) {
+      case Err<TransactionsPage>(:final failure):
+        return Err<_CollectedPage>(failure);
+      case Ok<TransactionsPage>(value: final page):
+        final loaded = fromOffset + page.items.length;
+        return Ok<_CollectedPage>(
+          _CollectedPage(
+            rows: <TransactionRowViewModel>[
+              for (final item in page.items) TransactionRowViewModel.of(item),
+            ],
+            loadedCount: loaded,
+            totalCount: page.totalCount,
+            // Trang ngắn hơn giới hạn là dấu hiệu chắc chắn đã hết; phép so với
+            // tổng là lưới thứ hai cho trường hợp dữ liệu đổi giữa hai trang.
+            hasMore: page.items.length == pageSize && loaded < page.totalCount,
+          ),
+        );
+    }
   }
 
   Future<void> _loadDetail(int id, Emitter<TransactionsState> emit) async {
@@ -532,53 +497,25 @@ final class TransactionsBloc
             detail: TransactionDetailViewModel.of(
               tx,
               accountName: state.accountNames[tx.accountId] ?? '',
-              isReconciled: await _isReconciled(tx),
+              confirmedPairId: await _confirmedPairIdOf(tx),
             ),
           ),
         );
     }
   }
 
-  /// Giao dịch này có thuộc một cặp **đã xác nhận** không (UC-04, UC-09).
+  /// Cặp **đã xác nhận** đang chứa giao dịch này, nếu có (UC-04 bước 4 → UC-09).
   ///
-  /// Dòng đã có trong danh sách thì câu trả lời nằm sẵn ở đó — đường đọc danh
-  /// sách đã hỏi một lần cho cả trang. Chỉ khi vào thẳng bằng định danh (liên
-  /// kết từ màn hình đối soát, hoặc route được dựng lại) mới phải hỏi lại, và
-  /// khi đó phép hỏi được thu hẹp về **đúng một tài khoản trong đúng một ngày**
-  /// — hai tiêu chí đều có chỉ mục, nên nó rẻ dù bảng có lớn tới đâu.
-  ///
-  /// Đây là chỗ vòng vo duy nhất trong BLoC này, và nó vòng vo vì tầng
-  /// Application chưa có đường đọc *một* dòng danh sách theo định danh: use case
-  /// chỉ có `findById` (trả Entity trần) và `execute` (trả cả trang). Một
-  /// `QueryTransactionsUseCase.findListItemById` sẽ thay cả hàm này bằng một lời
-  /// gọi.
-  Future<bool> _isReconciled(Transaction tx) async {
-    final cached = state.rows.where(
-      (row) => row.transactionId == tx.transactionId,
-    );
-    if (cached.isNotEmpty) return cached.first.isReconciled;
-
-    final result = await _query.execute(
-      QueryTransactionsRequest(
-        filter: TransactionFilter(
-          accountId: tx.accountId,
-          dateRange: DateRange.singleDay(tx.bookingDate),
-        ),
-        limit: pageSize,
-        offset: 0,
-      ),
-    );
-    final page = result.valueOrNull;
-    if (page == null) return false;
-    for (final item in page.items) {
-      if (item.transaction.transactionId == tx.transactionId) {
-        return item.isReconciled;
-      }
-    }
-    // Cùng một tài khoản trong cùng một ngày mà nhiều hơn một trang thì dòng cần
-    // tìm có thể nằm ngoài; báo "chưa đối soát" là chọn cái sai ít gây hại hơn —
-    // chỉ báo vắng mặt, chứ không phải một chỉ báo sai xuất hiện.
-    return false;
+  /// Một lời gọi cho cả hai thứ màn hình chi tiết cần: chỉ báo "đã đối soát" và
+  /// định danh cặp để mở thẳng tới nó. Không đọc từ [TransactionsState.rows] dù
+  /// dòng có thể đang nằm sẵn ở đó — danh sách chỉ mang cờ boolean, và vào thẳng
+  /// bằng route thì nó còn rỗng.
+  Future<int?> _confirmedPairIdOf(Transaction tx) async {
+    final id = tx.transactionId;
+    if (id == null) return null;
+    // Đọc hỏng thì báo "chưa đối soát": màn hình đang dựng một chỉ báo, và một
+    // chỉ báo vắng mặt ít gây hại hơn một chỉ báo sai xuất hiện.
+    return (await _query.findConfirmedPairId(id)).valueOrNull;
   }
 
   Future<Map<int, String>> _loadAccountNames() async {
@@ -614,19 +551,19 @@ final class TransactionsBloc
       _notices.of(FailurePresenter.of(failure, context: subject));
 }
 
-/// Kết quả một lần đọc, sau khi ngữ cảnh đã lọc.
+/// Kết quả một lần đọc một trang.
 final class _CollectedPage {
   const _CollectedPage({
     required this.rows,
-    required this.scannedCount,
+    required this.loadedCount,
     required this.totalCount,
     required this.hasMore,
   });
 
   final List<TransactionRowViewModel> rows;
 
-  /// Số dòng đã đọc lên từ cơ sở dữ liệu — offset của lần đọc kế tiếp.
-  final int scannedCount;
+  /// Số dòng đã đọc lên tính từ đầu danh sách — offset của lần đọc kế tiếp.
+  final int loadedCount;
 
   final int totalCount;
   final bool hasMore;

@@ -61,14 +61,12 @@ final class OpenReconciliation extends NavigationIntent {
   /// Mở thẳng tới một cặp cụ thể.
   ///
   /// Vào từ chỉ báo "đã đối soát" ở màn hình chi tiết giao dịch thì giá trị này
-  /// **hiện chưa có**: tầng Application không có đường đọc nào trả về cặp chứa
-  /// một giao dịch cho trước — `ReconciliationRepository.findPairInvolving` tồn
-  /// tại nhưng không use case nào phơi nó ra. Đường đi đó vì thế mở màn hình ở
-  /// nhóm *Đã xác nhận* thay vì bung sẵn đúng cặp; người dùng vẫn tới đúng chỗ,
-  /// chỉ mất một cú bấm.
+  /// là cặp đã xác nhận chứa giao dịch ấy, do
+  /// `QueryTransactionsUseCase.findConfirmedPairId` trả về cùng lúc với chính
+  /// chỉ báo — nên chỉ báo và liên kết không bao giờ nói hai điều khác nhau.
   ///
-  /// Một `ListMatchAlternativesUseCase.findPairForTransaction(id)` bọc phương
-  /// thức repository đã có sẽ lấp chỗ này bằng vài dòng.
+  /// `null` là mở màn hình ở [status] mà không bung sẵn cặp nào: đường đi từ
+  /// tổng kết một lượt nhập (UC-02 bước 8) không có cặp cụ thể nào để trỏ tới.
   final int? focusPairId;
 
   /// Nhóm phán quyết mở sẵn.
