@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../shared/responsive/breakpoints.dart';
 import '../view_models/navigation_intent.dart';
 
 /// Nav rail dọc bên trái của bản web.
@@ -116,17 +117,20 @@ class _RailTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.ledger;
     final foreground = selected ? colors.primaryDeep : colors.inkSecondary;
+    final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.only(bottom: Gap.xs),
       child: Tooltip(
         message: showLabel ? '' : label,
         child: InkWell(
           onTap: onTap,
           borderRadius: Corner.radiusSm,
           child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            // Cùng chiều cao với ô tìm kiếm và nút bộ lọc bên phải: rail là một
+            // cột điều khiển, không phải một danh sách chữ.
+            height: sizeClass.controlHeight,
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md),
             decoration: BoxDecoration(
               color: selected ? colors.primaryWash : Colors.transparent,
               borderRadius: Corner.radiusSm,
@@ -136,15 +140,15 @@ class _RailTile extends StatelessWidget {
                   ? MainAxisAlignment.start
                   : MainAxisAlignment.center,
               children: <Widget>[
-                Icon(icon, size: 16, color: foreground),
+                Icon(icon, size: 18, color: foreground),
                 if (showLabel) ...<Widget>[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: Gap.md),
                   Expanded(
                     child: Text(
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: LedgerText.bodySm.copyWith(color: foreground),
+                      style: LedgerText.bodyMd.copyWith(color: foreground),
                     ),
                   ),
                 ],

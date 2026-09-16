@@ -54,8 +54,16 @@ enum WindowSizeClass {
   /// Vùng chạm tối thiểu của một điều khiển.
   double get minTouchTarget => this == WindowSizeClass.compact ? 48 : 32;
 
+  /// Chiều cao của một điều khiển nằm trên thanh công cụ — ô tìm kiếm, nút bộ
+  /// lọc, ô nav trong rail.
+  ///
+  /// Một con số duy nhất, vì ba widget đó đứng cạnh nhau: để mỗi cái tự chọn
+  /// chiều cao là cách một thanh công cụ trôi thành ba cỡ khác nhau. Bản hẹp
+  /// cao hơn vì đó là vùng chạm tối thiểu của ngón tay, không phải vì thẩm mỹ.
+  double get controlHeight => this == WindowSizeClass.compact ? 48 : 44;
+
   /// Đệm trong của thẻ.
-  double get cardPadding => this == WindowSizeClass.compact ? 24 : 16;
+  double get cardPadding => this == WindowSizeClass.compact ? 24 : 20;
 
   /// Số dòng nạp mỗi lần cuộn lười.
   ///

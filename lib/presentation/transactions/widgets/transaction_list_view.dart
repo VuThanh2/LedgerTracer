@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../shared/responsive/breakpoints.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/viewport_center.dart';
 import '../bloc/transactions_state.dart';
 import '../view_models/transaction_row_view_model.dart';
 import 'transaction_row_tile.dart';
@@ -61,8 +62,7 @@ class _TransactionListViewState extends State<TransactionListView> {
     final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
 
     if (state.isEmpty) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(Gap.screen),
+      return ViewportCenter(
         child: state.isNarrowed
             ? EmptyState(
                 title: 'No transactions match',

@@ -12,8 +12,6 @@ import '../reconciliation/bloc/reconciliation_event.dart';
 import '../reconciliation/bloc/reconciliation_state.dart';
 import '../reconciliation/reconciliation_page.dart';
 import '../reconciliation/view_models/reconciliation_group.dart';
-import '../shared/export/view_models/export_source.dart';
-import '../shared/export/widgets/export_dialog.dart';
 import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/frame_pulse.dart';
@@ -22,8 +20,8 @@ import '../statistics/bloc/statistics_event.dart';
 import '../statistics/statistics_page.dart';
 import '../transactions/bloc/transactions_bloc.dart';
 import '../transactions/bloc/transactions_event.dart';
-import '../transactions/bloc/transactions_state.dart';
 import '../transactions/transactions_page.dart';
+import '../transactions/widgets/export_transactions_button.dart';
 import 'bloc/app_shell_bloc.dart';
 import 'bloc/app_shell_event.dart';
 import 'bloc/app_shell_state.dart';
@@ -35,7 +33,13 @@ import 'widgets/nav_rail.dart';
 ///
 /// Bốn trang nằm trong một [IndexedStack] chứ không dựng lại theo tab: một lượt
 /// nhập đang chạy phải sống sót khi người dùng sang tab khác — thiết kế yêu cầu
-/// đúng điều đó, và app bar giữ một Frame Pulse thu nhỏ để họ vẫn thấy nó chạy.
+/// đúng điều đó, và một Frame Pulse thu nhỏ đi theo để họ vẫn thấy nó chạy.
+///
+/// App bar chỉ tồn tại ở bản hẹp, nơi nó là đường lùi của điều hướng. Bản rộng
+/// đã có rail mang tên màn và bánh răng Cài đặt, nên một thanh ngang nữa chỉ
+/// lặp lại thông tin đó trên suốt bề ngang màn hình; ba thứ nó từng chở được
+/// chuyển đi: nút Export sang thanh công cụ của màn Giao dịch, chỉ báo tác vụ
+/// nền xuống đầu thân trang, tiêu đề màn về rail.
 ///
 /// Điều hướng mang ngữ cảnh (`NavigationIntent`) được tiêu thụ ở đây: mọi đường
 /// đi giữa các màn đều đi qua một chỗ duy nhất, nên không màn nào phải biết cách
@@ -117,6 +121,8 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
 
+    final compact = sizeClass.usesBottomNavigation;
+
     return BlocConsumer<AppShellBloc, AppShellState>(
       listenWhen: (previous, current) =>
           previous.pendingNavigation != current.pendingNavigation &&
@@ -125,6 +131,11 @@ class _AppShellState extends State<AppShell> {
       builder: (context, state) {
         final body = Column(
           children: <Widget>[
+            // Không có app bar ở bản rộng thì chỉ báo tác vụ nền phải có chỗ
+            // khác, và nó vẫn phải nằm ngoài [IndexedStack]: người dùng được
+            // phép rời tab trong lúc nhập, nên thứ nói "việc chưa xong" không
+            // thể thuộc về một tab nào.
+            if (!compact) const _BackgroundWorkIndicator(asStrip: true),
             if (state.recoveryNotice case final notice?)
               Padding(
                 padding: const EdgeInsets.all(Gap.screen),
@@ -150,11 +161,8 @@ class _AppShellState extends State<AppShell> {
         );
 
         return Scaffold(
-          appBar: _ShellAppBar(
-            destination: state.destination,
-            compact: sizeClass.usesBottomNavigation,
-          ),
-          body: sizeClass.usesBottomNavigation
+          appBar: compact ? _ShellAppBar(destination: state.destination) : null,
+          body: compact
               ? body
               : Row(
                   children: <Widget>[
@@ -169,7 +177,7 @@ class _AppShellState extends State<AppShell> {
                     Expanded(child: body),
                   ],
                 ),
-          bottomNavigationBar: sizeClass.usesBottomNavigation
+          bottomNavigationBar: compact
               ? NavBar(destination: state.destination, onSelected: _select)
               : null,
         );
@@ -198,16 +206,18 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-/// App bar của khung: tiêu đề, chỉ báo tác vụ nền, và các hành động của tab.
+/// App bar của khung, và **chỉ ở bản hẹp**: tiêu đề màn, chỉ báo tác vụ nền,
+/// nút Export, lối vào Cài đặt.
+///
+/// Bản rộng không dựng nó — lý do nằm ở ghi chú của [AppShell]. Nhờ vậy mọi lựa
+/// chọn dưới đây là lựa chọn của một màn hẹp, không còn phải hỏi lại bề rộng:
+/// nhãn tiến độ lược đi vì không đủ chỗ cho cả tiêu đề lẫn một câu chữ, Export
+/// thu về một icon, và bánh răng Cài đặt có mặt vì ở đây không có rail để chứa
+/// nó.
 class _ShellAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ShellAppBar({required this.destination, required this.compact});
+  const _ShellAppBar({required this.destination});
 
   final NavDestination destination;
-
-  /// Ở Compact, bánh răng Cài đặt nằm ở app bar (rail không tồn tại), và nhãn
-  /// tiến độ bị lược đi — chỉ còn dải vạch, vì bề rộng ở đó không đủ cho cả tiêu
-  /// đề lẫn một câu chữ.
-  final bool compact;
 
   @override
   Size get preferredSize => const Size.fromHeight(56);
@@ -220,36 +230,36 @@ class _ShellAppBar extends StatelessWidget implements PreferredSizeWidget {
           child: Text(destination.label, overflow: TextOverflow.ellipsis),
         ),
         const SizedBox(width: Gap.md),
-        _BackgroundWorkIndicator(showLabel: !compact),
+        const _BackgroundWorkIndicator(),
       ],
     ),
     actions: <Widget>[
       if (destination == NavDestination.transactions)
-        Padding(
-          padding: const EdgeInsets.only(right: Gap.sm),
-          child: _ExportTransactionsButton(iconOnly: compact),
-        ),
-      if (compact)
-        IconButton(
-          tooltip: 'Settings',
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () =>
-              Navigator.of(context).pushNamed(LedgerRoutes.settings),
-        ),
+        const ExportTransactionsButton(iconOnly: true),
+      IconButton(
+        tooltip: 'Settings',
+        icon: const Icon(Icons.settings_outlined),
+        onPressed: () => Navigator.of(context).pushNamed(LedgerRoutes.settings),
+      ),
       const SizedBox(width: Gap.sm),
     ],
   );
 }
 
-/// Frame Pulse thu nhỏ trên app bar khi một tác vụ nền đang chạy.
+/// Frame Pulse thu nhỏ, hiện khi một tác vụ nền đang chạy.
 ///
 /// Người dùng được phép rời tab trong lúc nhập hoặc quét, nên phải có một chỗ
 /// nói rằng việc đó chưa xong. Sáu vạch thay vì mười hai: nó là lời nhắc, không
 /// phải chỉ báo chính.
 class _BackgroundWorkIndicator extends StatelessWidget {
-  const _BackgroundWorkIndicator({required this.showLabel});
+  const _BackgroundWorkIndicator({this.asStrip = false});
 
-  final bool showLabel;
+  /// Dựng thành một dải ngang có nền và đường kẻ, cho chỗ đứng ở đầu thân trang
+  /// của bản rộng; mặc định là dạng gọn để nhét vào app bar của bản hẹp.
+  ///
+  /// Dải chỉ tồn tại khi thực sự có việc đang chạy. Một khung rỗng luôn hiện sẽ
+  /// lấy mất một dải ngang của bảng trong suốt cả phiên để nói "không có gì".
+  final bool asStrip;
 
   @override
   Widget build(BuildContext context) {
@@ -271,60 +281,40 @@ class _BackgroundWorkIndicator extends StatelessWidget {
               final label = importState.isRunning
                   ? 'Importing ${importState.progress?.processedTotalText ?? ''}'
                   : 'Scanning for internal transfers';
-              return Row(
+              final row = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Tooltip(message: label, child: const FramePulse.compact()),
-                  if (showLabel) ...<Widget>[
+                  if (asStrip) ...<Widget>[
                     const SizedBox(width: Gap.sm),
-                    Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: LedgerText.caption.copyWith(color: colors.inkMute),
+                    Flexible(
+                      child: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                        style: LedgerText.caption.copyWith(
+                          color: colors.inkMute,
+                        ),
+                      ),
                     ),
                   ],
                 ],
+              );
+              if (!asStrip) return row;
+
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Gap.screen,
+                  vertical: Gap.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.canvasSoft,
+                  border: Border(bottom: BorderSide(color: colors.hairline)),
+                ),
+                child: row,
               );
             },
           ),
     );
   }
-}
-
-class _ExportTransactionsButton extends StatelessWidget {
-  const _ExportTransactionsButton({required this.iconOnly});
-
-  final bool iconOnly;
-
-  @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<TransactionsBloc, TransactionsState>(
-        buildWhen: (previous, current) =>
-            previous.status != current.status ||
-            previous.chips != current.chips,
-        builder: (context, state) {
-          void open() => ExportDialog.open(
-            context,
-            ExportTransactionsSource(
-              filter: state.filter,
-              context: state.context,
-              chips: state.chips,
-            ),
-          );
-          final onPressed = state.status.isReady ? open : null;
-
-          if (iconOnly) {
-            return IconButton(
-              tooltip: 'Export transactions',
-              icon: const Icon(Icons.file_download_outlined),
-              onPressed: onPressed,
-            );
-          }
-          return OutlinedButton.icon(
-            onPressed: onPressed,
-            icon: const Icon(Icons.file_download_outlined, size: 16),
-            label: const Text('Export'),
-          );
-        },
-      );
 }

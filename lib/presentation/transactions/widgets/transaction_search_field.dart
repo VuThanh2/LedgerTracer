@@ -51,10 +51,13 @@ class _TransactionSearchFieldState extends State<TransactionSearchField> {
   Widget build(BuildContext context) {
     final colors = context.ledger;
     final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
-    final height = sizeClass.usesBottomNavigation ? 48.0 : 40.0;
+    // Bản hẹp giữ nguyên cỡ cũ: ô ở đó đã cao 48 cho ngón tay, chỉ bản rộng mới
+    // là chỗ bị kêu là nhỏ.
+    final iconSize = sizeClass.usesBottomNavigation ? 16.0 : 18.0;
+    final iconBox = sizeClass.usesBottomNavigation ? 36.0 : 40.0;
 
     return SizedBox(
-      height: height,
+      height: sizeClass.controlHeight,
       child: TextField(
         controller: _controller,
         onChanged: widget.onChanged,
@@ -62,15 +65,15 @@ class _TransactionSearchFieldState extends State<TransactionSearchField> {
         style: LedgerText.bodyMd.copyWith(color: colors.ink),
         decoration: InputDecoration(
           hintText: 'Search counterparty, memo…',
-          prefixIcon: Icon(Icons.search, size: 16, color: colors.inkMute),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
+          prefixIcon: Icon(Icons.search, size: iconSize, color: colors.inkMute),
+          prefixIconConstraints: BoxConstraints(
+            minWidth: iconBox,
+            minHeight: iconBox,
           ),
           suffixIcon: _controller.text.isEmpty
               ? null
               : IconButton(
-                  icon: Icon(Icons.close, size: 16, color: colors.inkMute),
+                  icon: Icon(Icons.close, size: iconSize, color: colors.inkMute),
                   tooltip: 'Clear the keyword',
                   onPressed: () {
                     _controller.clear();

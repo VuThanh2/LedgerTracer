@@ -11,6 +11,7 @@ import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/currency_tab_bar.dart';
 import '../shared/widgets/empty_state.dart';
+import '../shared/widgets/viewport_center.dart';
 import '../shared/widgets/section_card.dart';
 import '../shell/bloc/app_shell_bloc.dart';
 import '../shell/bloc/app_shell_event.dart';
@@ -50,8 +51,7 @@ class StatisticsPage extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (state.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(Gap.screen),
+          return ViewportCenter(
             child: EmptyState(
               title: 'No figures yet',
               message:

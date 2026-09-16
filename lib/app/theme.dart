@@ -514,7 +514,7 @@ abstract final class LedgerText {
 
 /// Dựng [ThemeData] từ các token bên trên.
 abstract final class LedgerTheme {
-  static ThemeData light({bool compactDensity = false}) {
+  static ThemeData light() {
     const colors = LedgerColors.light;
     final scheme = ColorScheme.fromSeed(seedColor: colors.primary).copyWith(
       primary: colors.primary,
@@ -536,11 +536,11 @@ abstract final class LedgerTheme {
       fontFamily: LedgerText.family,
       fontFamilyFallback: LedgerText.familyFallback,
 
-      // Density theo **tác vụ**, không theo kích thước màn: web là nơi nhập
-      // hàng loạt và so sánh nên cần nhiều dòng cùng lúc.
-      visualDensity: compactDensity
-          ? VisualDensity.compact
-          : VisualDensity.standard,
+      // Một mật độ duy nhất cho mọi bề rộng. Bản rộng từng chạy
+      // `VisualDensity.compact` để xem được nhiều dòng hơn, nhưng nó bóp mọi
+      // control đi 8px trên cả hai trục và bản Web trở nên khó bấm; đổi lấy vài
+      // dòng hiển thị thêm là một món hời tồi.
+      visualDensity: VisualDensity.standard,
 
       textTheme: _textTheme(colors),
       appBarTheme: AppBarTheme(
@@ -587,14 +587,6 @@ abstract final class LedgerTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Corner.xl),
         ),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: colors.ink,
-        contentTextStyle: LedgerText.bodySm.copyWith(color: colors.onPrimary),
-        actionTextColor: colors.primarySubdued,
-        behavior: SnackBarBehavior.floating,
-        elevation: 1,
-        shape: const RoundedRectangleBorder(borderRadius: Corner.radiusMd),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

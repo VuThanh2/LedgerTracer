@@ -4,6 +4,7 @@ import 'package:ledger_tracer/application/settings/reset_app/reset_app_use_case.
 import 'package:ledger_tracer/presentation/settings/bloc/app_lock_bloc.dart';
 import 'package:ledger_tracer/presentation/settings/bloc/app_lock_event.dart';
 import 'package:ledger_tracer/presentation/settings/bloc/app_lock_state.dart';
+import 'package:ledger_tracer/presentation/diagnostics/diagnostics_unlock.dart';
 import 'package:ledger_tracer/presentation/settings/bloc/settings_bloc.dart';
 import 'package:ledger_tracer/presentation/settings/bloc/settings_event.dart';
 
@@ -31,7 +32,8 @@ void main() {
     resetApp: ResetAppUseCase(store: store),
   );
 
-  SettingsBloc buildSettings() => SettingsBloc(appLock: appLock);
+  SettingsBloc buildSettings({DiagnosticsUnlock? unlock}) =>
+      SettingsBloc(appLock: appLock, diagnosticsUnlock: unlock);
 
   group('cổng khoá', () {
     test('khoá tắt thì vào thẳng', () async {
@@ -255,6 +257,30 @@ void main() {
       );
       expect(state.notice, isNotNull);
       await bloc.close();
+    });
+
+    test('mở khoá Chẩn đoán sống qua một lần rời màn Cài đặt', () async {
+      // `SettingsBloc` chết cùng route Settings, nên cờ mở khoá phải nằm ở
+      // chỗ khác. Hai BLoC dưới đây chính là hai lần mở màn Cài đặt.
+      final unlock = DiagnosticsUnlock();
+
+      final first = buildSettings(unlock: unlock);
+      first.add(const SettingsStarted());
+      await first.stream.firstWhere((state) => state.status.isReady);
+      for (var i = 0; i < first.hiddenTapsRequired; i++) {
+        first.add(const SettingsHiddenEntryTapped());
+      }
+      await first.stream.firstWhere((state) => state.diagnosticsUnlocked);
+      await first.close();
+
+      final second = buildSettings(unlock: unlock);
+      expect(second.state.diagnosticsUnlocked, isTrue);
+      await second.close();
+
+      // Cờ của một phiên khác thì không: khởi động lại ứng dụng là khoá lại.
+      final other = buildSettings(unlock: DiagnosticsUnlock());
+      expect(other.state.diagnosticsUnlocked, isFalse);
+      await other.close();
     });
   });
 }

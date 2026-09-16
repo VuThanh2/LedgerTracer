@@ -6,6 +6,7 @@ import '../../../core/result/result.dart';
 import '../../shared/bloc/event_transformers.dart';
 import '../../shared/bloc/load_status.dart';
 import '../../shared/bloc/transient_notice.dart';
+import '../../diagnostics/diagnostics_unlock.dart';
 import '../../shared/failures/failure_presenter.dart';
 import 'settings_event.dart';
 import 'settings_state.dart';
@@ -24,9 +25,19 @@ import 'settings_state.dart';
 ///   lớp mở nhanh đặt **trên** mã PIN, không phải thứ thay thế nó — cảm biến
 ///   hỏng không được khoá người dùng ra ngoài.
 final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
-  SettingsBloc({required AppLockUseCase appLock, this.hiddenTapsRequired = 7})
-    : _lock = appLock,
-      super(const SettingsState()) {
+  SettingsBloc({
+    required AppLockUseCase appLock,
+    DiagnosticsUnlock? diagnosticsUnlock,
+    this.hiddenTapsRequired = 7,
+  }) : _lock = appLock,
+       _unlock = diagnosticsUnlock ?? DiagnosticsUnlock(),
+       // Doc lai co cua phien: mo khoa o lan vao Settings truoc thi lan nay
+       // muc an da hien san, khong phai cham lai bay cai.
+       super(
+         SettingsState(
+           diagnosticsUnlocked: diagnosticsUnlock?.isUnlocked ?? false,
+         ),
+       ) {
     on<SettingsStarted>(
       _onStarted,
       transformer: EventTransformers.restartable(),
@@ -52,6 +63,11 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
   final AppLockUseCase _lock;
   final NoticeSink _notices = NoticeSink();
+
+  /// Co mo khoa song bang mot phien chay. Mac dinh la mot ban rieng cua
+  /// chinh BLoC nay, nen mot test dung no ma khong quan tam toi Diagnostics
+  /// van chay duoc va van bat dau tu trang thai khoa.
+  final DiagnosticsUnlock _unlock;
 
   /// Số lần chạm để lộ mục vào màn hình chẩn đoán.
   final int hiddenTapsRequired;
@@ -148,11 +164,15 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) {
     if (state.diagnosticsUnlocked) return;
     final taps = state.hiddenTapCount + 1;
+    final unlocked = taps >= hiddenTapsRequired;
+    // Ghi ra co cua phien truoc khi emit: BLoC nay chet cung route Settings,
+    // con co thi khong.
+    if (unlocked) _unlock.unlock();
     emit(
       state.copyWith(
         hiddenTapCount: taps,
-        diagnosticsUnlocked: taps >= hiddenTapsRequired,
-        notice: taps >= hiddenTapsRequired
+        diagnosticsUnlocked: unlocked,
+        notice: unlocked
             ? _notices.info(
                 'Developer diagnostics unlocked at the bottom of '
                 'this page.',

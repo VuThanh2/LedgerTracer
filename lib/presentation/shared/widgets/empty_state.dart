@@ -7,6 +7,15 @@ import '../../../app/theme.dart';
 /// Vì vậy [message] phải nói điều gì sẽ đưa dữ liệu vào đây ("Chưa có giao dịch
 /// nào. Nhập một file sao kê để bắt đầu.") thay vì mô tả sự vắng mặt ("Không tìm
 /// thấy dữ liệu"), và một `button-secondary` dẫn thẳng tới hành động đó.
+///
+/// Panel tự giới hạn ở [maxWidth] và tự căn giữa theo chiều ngang. Kéo nó ra
+/// hết bề ngang một cửa sổ desktop là cách ba dòng chữ ngắn biến thành một dải
+/// ngang rỗng: chiều dài dòng vượt tầm đọc, và cái đáng nhìn — nút dẫn ra khỏi
+/// tình huống — bị đẩy vào giữa một vùng trống.
+///
+/// Căn giữa theo chiều **dọc** là việc của chỗ đặt, không phải của panel: bọc
+/// nó trong [ViewportCenter] khi nó là toàn bộ nội dung của màn, và để nguyên
+/// khi nó là một mục trong danh sách.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     required this.title,
@@ -14,8 +23,12 @@ class EmptyState extends StatelessWidget {
     this.icon = Icons.inbox_outlined,
     this.actionLabel,
     this.onAction,
+    this.maxWidth = defaultMaxWidth,
     super.key,
   });
+
+  /// Bề ngang tối đa của panel.
+  static const double defaultMaxWidth = 520;
 
   /// Một dòng `display-md`, nói tình huống.
   final String title;
@@ -28,13 +41,24 @@ class EmptyState extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
 
+  final double maxWidth;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: _panel(colors),
+      ),
+    );
+  }
+
+  Widget _panel(LedgerColors colors) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
-        horizontal: Gap.lg,
+        horizontal: Gap.xl,
         vertical: Gap.xxl,
       ),
       decoration: BoxDecoration(

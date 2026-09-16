@@ -8,6 +8,8 @@ import '../shared/export/widgets/export_dialog.dart';
 import '../shared/failures/feedback_message.dart';
 import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
+import '../shared/widgets/notice_overlay.dart';
+import '../shared/widgets/viewport_center.dart';
 import '../shared/widgets/confirm_dialog.dart';
 import '../shell/bloc/app_shell_bloc.dart';
 import '../shell/bloc/app_shell_event.dart';
@@ -138,9 +140,7 @@ class _NewImportTab extends StatelessWidget {
       listenWhen: (previous, current) => previous.notice != current.notice,
       listener: (context, state) {
         if (state.notice case final notice?) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(notice.message.text)));
+          showNotice(context, notice.message);
         }
       },
       builder: (context, state) {
@@ -152,13 +152,14 @@ class _NewImportTab extends StatelessWidget {
               showLabels: !sizeClass.usesBottomNavigation,
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(Gap.screen),
-                children: <Widget>[
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 840),
-                      child: Column(
+              child: ViewportCenter(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Gap.screen,
+                  vertical: Gap.xl,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 840),
+                  child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
                           Text(
@@ -238,12 +239,9 @@ class _NewImportTab extends StatelessWidget {
                                   ),
                             ),
                           },
-                          const SizedBox(height: Gap.xl),
                         ],
-                      ),
-                    ),
                   ),
-                ],
+                ),
               ),
             ),
             _StepperFooter(state: state),

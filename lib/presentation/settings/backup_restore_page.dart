@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../app/dependencies.dart';
 import '../../app/theme.dart';
 import '../shared/failures/feedback_message.dart';
+import '../shared/widgets/pushed_page_scaffold.dart';
+import '../shared/widgets/notice_overlay.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/confirm_dialog.dart';
 import '../shared/widgets/section_card.dart';
@@ -59,8 +61,8 @@ class _BackupRestoreViewState extends State<_BackupRestoreView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Backup & restore')),
+    return PushedPageScaffold(
+      title: 'Backup & restore',
       body: BlocConsumer<BackupRestoreBloc, BackupRestoreState>(
         listenWhen: (previous, current) =>
             previous.notice != current.notice ||
@@ -72,9 +74,7 @@ class _BackupRestoreViewState extends State<_BackupRestoreView> {
             return;
           }
           if (state.notice case final notice?) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(notice.message.text)));
+            showNotice(context, notice.message);
           }
         },
         builder: (context, state) {

@@ -10,8 +10,9 @@ import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/confirm_dialog.dart';
 import '../shared/widgets/empty_state.dart';
+import '../shared/widgets/notice_overlay.dart';
+import '../shared/widgets/viewport_center.dart';
 import '../shared/widgets/progress_panel.dart';
-import '../shared/widgets/section_card.dart';
 import '../shared/widgets/web_limitation_banner.dart';
 import '../shell/bloc/app_shell_bloc.dart';
 import '../shell/bloc/app_shell_event.dart';
@@ -94,22 +95,19 @@ class _ReconciliationPageState extends State<ReconciliationPage> {
         final notice = state.notice;
         if (notice == null) return;
         final undoable = state.undoableRejectionId;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(notice.message.text),
-              duration: const Duration(seconds: 6),
-              action: undoable == null
-                  ? null
-                  : SnackBarAction(
-                      label: 'Undo',
-                      onPressed: () => context.read<ReconciliationBloc>().add(
-                        ReconciliationRejectionUndone(undoable),
-                      ),
-                    ),
-            ),
-          );
+        showNotice(
+          context,
+          notice.message,
+          actionLabel: undoable == null ? null : 'Undo',
+          onAction: undoable == null
+              ? null
+              : () => context.read<ReconciliationBloc>().add(
+                  ReconciliationRejectionUndone(undoable),
+                ),
+          // Đọc một câu thì bốn giây là đủ; quyết định có hoàn tác hay không
+          // thì không.
+          visibleFor: undoable == null ? null : const Duration(seconds: 8),
+        );
       },
       builder: (context, state) {
         if (state.status.isInitial) {
@@ -259,6 +257,34 @@ class _GroupBody extends StatelessWidget {
         ? state.rejected.isEmpty
         : state.pairs.isEmpty;
 
+    // Nhom rong thoat som: panel khi ay la **toan bo** noi dung cua tab, nen
+    // no thuoc ve giua man hinh chu khong phai muc dau cua mot danh sach rong.
+    if (isEmpty) {
+      return ColoredBox(
+        color: colors.canvasSoft,
+        child: ViewportCenter(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (state.loadError case final FeedbackMessage error) ...<Widget>[
+                BannerMessage(error),
+                const SizedBox(height: Gap.lg),
+              ],
+              EmptyState(
+                title: _emptyTitleOf(state.group),
+                message: _emptyMessageOf(state.group),
+                icon: switch (state.group) {
+                  ReconciliationGroup.pending => Icons.search_off,
+                  ReconciliationGroup.confirmed => Icons.check_circle_outline,
+                  ReconciliationGroup.rejected => Icons.block_outlined,
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return ColoredBox(
       color: colors.canvasSoft,
       child: ListView(
@@ -268,17 +294,7 @@ class _GroupBody extends StatelessWidget {
             BannerMessage(error),
             const SizedBox(height: Gap.lg),
           ],
-          if (isEmpty)
-            EmptyState(
-              title: _emptyTitleOf(state.group),
-              message: _emptyMessageOf(state.group),
-              icon: switch (state.group) {
-                ReconciliationGroup.pending => Icons.search_off,
-                ReconciliationGroup.confirmed => Icons.check_circle_outline,
-                ReconciliationGroup.rejected => Icons.block_outlined,
-              },
-            )
-          else if (isRejectedGroup)
+          if (isRejectedGroup)
             RejectedList(
               state: state,
               onUndo: (id) => bloc.add(ReconciliationRejectionUndone(id)),
@@ -378,25 +394,18 @@ class _NotEnoughAccounts extends StatelessWidget {
   final ReconciliationState state;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(Gap.screen),
-    child: Column(
-      children: <Widget>[
-        SectionCard(
-          child: EmptyState(
-            title: 'Reconciliation needs two accounts',
-            message:
-                'Only ${state.accountsWithTransactions} account holds '
-                'transactions so far. An internal match is the same amount '
-                'showing up in two different accounts, so two is the minimum.',
-            icon: Icons.account_balance_outlined,
-            actionLabel: 'Import more statements',
-            onAction: () => context.read<AppShellBloc>().add(
-              const AppShellNavigationRequested(OpenImport()),
-            ),
-          ),
-        ),
-      ],
+  Widget build(BuildContext context) => ViewportCenter(
+    child: EmptyState(
+      title: 'Reconciliation needs two accounts',
+      message:
+          'Only ${state.accountsWithTransactions} account holds transactions '
+          'so far. An internal match is the same amount showing up in two '
+          'different accounts, so two is the minimum.',
+      icon: Icons.account_balance_outlined,
+      actionLabel: 'Import more statements',
+      onAction: () => context.read<AppShellBloc>().add(
+        const AppShellNavigationRequested(OpenImport()),
+      ),
     ),
   );
 }

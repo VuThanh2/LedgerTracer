@@ -5,12 +5,13 @@ import '../presentation/import/bloc/import_bloc.dart';
 import '../presentation/import/bloc/import_event.dart';
 import '../presentation/import/bloc/import_history_bloc.dart';
 import '../presentation/reconciliation/bloc/reconciliation_bloc.dart';
+import '../presentation/diagnostics/diagnostics_unlock.dart';
 import '../presentation/settings/app_lock_page.dart';
 import '../presentation/settings/bloc/app_lock_bloc.dart';
 import '../presentation/settings/bloc/app_lock_event.dart';
 import '../presentation/settings/bloc/app_lock_state.dart';
 import '../presentation/shared/export/bloc/export_bloc.dart';
-import '../presentation/shared/responsive/breakpoints.dart';
+import '../presentation/shared/widgets/notice_overlay.dart';
 import '../presentation/shell/app_shell.dart';
 import '../presentation/shell/bloc/app_shell_bloc.dart';
 import '../presentation/statistics/bloc/statistics_bloc.dart';
@@ -59,7 +60,11 @@ class _LedgerTracerAppState extends State<LedgerTracerApp> {
   @override
   Widget build(BuildContext context) => DependencyScope(
     dependencies: widget.dependencies,
-    child: MultiBlocProvider(
+    // Co mo khoa Diagnostics o goc cay, khong trong SettingsBloc: BLoC do
+    // chet theo route Settings, con quyet dinh "da mo" phai song het phien.
+    child: RepositoryProvider<DiagnosticsUnlock>(
+      create: (_) => DiagnosticsUnlock(),
+      child: MultiBlocProvider(
       providers: <BlocProvider<dynamic>>[
         BlocProvider<AppShellBloc>(
           create: (_) => AppShellBloc(
@@ -117,8 +122,9 @@ class _LedgerTracerAppState extends State<LedgerTracerApp> {
             resetApp: widget.dependencies.resetApp,
           )..add(const AppLockChecked()),
         ),
-      ],
-      child: const _LedgerMaterialApp(),
+        ],
+        child: const _LedgerMaterialApp(),
+      ),
     ),
   );
 }
@@ -133,19 +139,10 @@ class _LedgerMaterialApp extends StatelessWidget {
     theme: LedgerTheme.light(),
     onGenerateRoute: LedgerRouter.onGenerateRoute,
     home: const _AppLockGate(),
-    builder: (context, child) {
-      // Density chọn theo **tác vụ**, và tác vụ ở đây gắn với breakpoint: bản
-      // rộng là nơi nhập hàng loạt và so sánh nhiều dòng, bản hẹp là nơi tra
-      // cứu và vuốt xác nhận. Quyết định ở đây, một lần, thay vì để từng widget
-      // tự đoán.
-      final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
-      return Theme(
-        data: LedgerTheme.light(
-          compactDensity: !sizeClass.usesBottomNavigation,
-        ),
-        child: child ?? const SizedBox.shrink(),
-      );
-    },
+    // Chong thong bao dung tren Navigator, nen no van nhin thay duoc khi co
+    // hop thoai dang mo.
+    builder: (context, child) =>
+        NoticeOverlay(child: child ?? const SizedBox.shrink()),
   );
 }
 

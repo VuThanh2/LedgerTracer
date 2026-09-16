@@ -4,8 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../app/dependencies.dart';
 import '../../app/router.dart';
 import '../../app/theme.dart';
+import '../diagnostics/diagnostics_unlock.dart';
 import '../shared/failures/feedback_message.dart';
 import '../shared/widgets/banner_message.dart';
+import '../shared/widgets/pushed_page_scaffold.dart';
+import '../shared/widgets/notice_overlay.dart';
 import '../shared/widgets/section_card.dart';
 import 'bloc/settings_bloc.dart';
 import 'bloc/settings_event.dart';
@@ -29,8 +32,10 @@ class SettingsPage extends StatelessWidget {
     final dependencies = DependencyScope.of(context);
     return BlocProvider<SettingsBloc>(
       create: (_) =>
-          SettingsBloc(appLock: dependencies.appLock)
-            ..add(const SettingsStarted()),
+          SettingsBloc(
+            appLock: dependencies.appLock,
+            diagnosticsUnlock: context.read<DiagnosticsUnlock>(),
+          )..add(const SettingsStarted()),
       child: const _SettingsView(),
     );
   }
@@ -42,15 +47,13 @@ class _SettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+    return PushedPageScaffold(
+      title: 'Settings',
       body: BlocConsumer<SettingsBloc, SettingsState>(
         listenWhen: (previous, current) => previous.notice != current.notice,
         listener: (context, state) {
           if (state.notice case final notice?) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(notice.message.text)));
+            showNotice(context, notice.message);
           }
         },
         builder: (context, state) {
@@ -123,8 +126,10 @@ class _SettingsView extends StatelessWidget {
 /// Mục ẩn dẫn tới màn Developer Diagnostics.
 ///
 /// Trước khi mở khoá, nó chỉ là dòng chữ phiên bản — chạm nhiều lần mới hiện
-/// liên kết. Một khi đã mở, nó ở lại: bắt người dùng chạm lại bảy lần mỗi lần
-/// muốn đo là trò đùa với chính mình.
+/// liên kết. Một khi đã mở, nó ở lại **tới hết phiên chạy**: bắt người dùng
+/// chạm lại bảy lần mỗi lần rời màn là trò đùa với chính mình, còn ghi xuống
+/// đĩa thì một lần chạm nhầm sẽ để lại lối vào đó vĩnh viễn mà không có nút
+/// tắt nào. Cờ sống ở [DiagnosticsUnlock], cấp ở gốc ứng dụng.
 class _HiddenDiagnosticsEntry extends StatelessWidget {
   const _HiddenDiagnosticsEntry({required this.state});
 

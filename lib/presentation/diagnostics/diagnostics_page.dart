@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../app/dependencies.dart';
 import '../../app/theme.dart';
 import '../shared/failures/feedback_message.dart';
+import '../shared/widgets/pushed_page_scaffold.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/frame_pulse.dart';
 import 'bloc/diagnostics_bloc.dart';
@@ -50,25 +51,23 @@ class _DiagnosticsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Developer diagnostics'),
-        actions: <Widget>[
-          BlocBuilder<DiagnosticsBloc, DiagnosticsState>(
-            buildWhen: (previous, current) =>
-                previous.hasResults != current.hasResults ||
-                previous.isRunning != current.isRunning,
-            builder: (context, state) => TextButton(
-              onPressed: state.hasResults && !state.isRunning
-                  ? () => context.read<DiagnosticsBloc>().add(
-                      const DiagnosticsCleared(),
-                    )
-                  : null,
-              child: const Text('Clear results'),
-            ),
+    return PushedPageScaffold(
+      title: 'Developer diagnostics',
+      actions: <Widget>[
+        BlocBuilder<DiagnosticsBloc, DiagnosticsState>(
+          buildWhen: (previous, current) =>
+              previous.hasResults != current.hasResults ||
+              previous.isRunning != current.isRunning,
+          builder: (context, state) => TextButton(
+            onPressed: state.hasResults && !state.isRunning
+                ? () => context.read<DiagnosticsBloc>().add(
+                    const DiagnosticsCleared(),
+                  )
+                : null,
+            child: const Text('Clear results'),
           ),
-        ],
-      ),
+        ),
+      ],
       body: BlocBuilder<DiagnosticsBloc, DiagnosticsState>(
         builder: (context, state) {
           final bloc = context.read<DiagnosticsBloc>();
