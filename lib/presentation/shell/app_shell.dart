@@ -28,6 +28,7 @@ import 'bloc/app_shell_state.dart';
 import 'view_models/navigation_intent.dart';
 import 'widgets/nav_bar.dart';
 import 'widgets/nav_rail.dart';
+import 'widgets/tab_transition.dart';
 
 /// Khung điều hướng bao ngoài bốn màn hình hằng ngày.
 ///
@@ -147,8 +148,11 @@ class _AppShellState extends State<AppShell> {
                 ),
               ),
             Expanded(
-              child: IndexedStack(
+              child: TabTransition(
                 index: state.destination.index,
+                // Chỉ bản mobile: đổi tab ở đó là thay cả màn hình, nên cần
+                // chút chuyển cảnh để mắt theo kịp.
+                enabled: compact,
                 children: <Widget>[
                   for (final destination in NavDestination.values)
                     _started.contains(destination)

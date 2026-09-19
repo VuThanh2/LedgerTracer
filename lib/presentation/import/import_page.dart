@@ -160,86 +160,86 @@ class _NewImportTab extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 840),
                   child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Text(
-                            'Step ${state.step.index + 1} of 4',
-                            style: LedgerText.microCap.copyWith(
-                              color: context.ledger.inkSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: Gap.xs),
-                          Text(
-                            ImportStepper.titleOf(state.step),
-                            style: LedgerText.displayMd.copyWith(
-                              color: context.ledger.ink,
-                            ),
-                          ),
-                          const SizedBox(height: Gap.xs),
-                          Text(
-                            ImportStepper.subtitleOf(state.step),
-                            style: LedgerText.caption.copyWith(
-                              color: context.ledger.inkMute,
-                            ),
-                          ),
-                          const SizedBox(height: Gap.xl),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Text(
+                        'Step ${state.step.index + 1} of 4',
+                        style: LedgerText.microCap.copyWith(
+                          color: context.ledger.inkSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: Gap.xs),
+                      Text(
+                        ImportStepper.titleOf(state.step),
+                        style: LedgerText.displayMd.copyWith(
+                          color: context.ledger.ink,
+                        ),
+                      ),
+                      const SizedBox(height: Gap.xs),
+                      Text(
+                        ImportStepper.subtitleOf(state.step),
+                        style: LedgerText.caption.copyWith(
+                          color: context.ledger.inkMute,
+                        ),
+                      ),
+                      const SizedBox(height: Gap.xl),
 
-                          if (state.error case final FeedbackMessage error) ...[
-                            BannerMessage(error),
-                            const SizedBox(height: Gap.lg),
-                          ],
+                      if (state.error case final FeedbackMessage error) ...[
+                        BannerMessage(error),
+                        const SizedBox(height: Gap.lg),
+                      ],
 
-                          switch (state.step) {
-                            ImportStep.pickFiles => StepPickFiles(
-                              state: state,
-                              onPick: () =>
-                                  bloc.add(const ImportFilesPickRequested()),
-                              onRemove: (fileName) =>
-                                  bloc.add(ImportFileRemoved(fileName)),
+                      switch (state.step) {
+                        ImportStep.pickFiles => StepPickFiles(
+                          state: state,
+                          onPick: () =>
+                              bloc.add(const ImportFilesPickRequested()),
+                          onRemove: (fileName) =>
+                              bloc.add(ImportFileRemoved(fileName)),
+                        ),
+                        ImportStep.assignAccounts => StepAssignAccounts(
+                          state: state,
+                          onAssign: (fileName, accountId) => bloc.add(
+                            ImportFileAccountAssigned(
+                              fileName: fileName,
+                              accountId: accountId,
                             ),
-                            ImportStep.assignAccounts => StepAssignAccounts(
-                              state: state,
-                              onAssign: (fileName, accountId) => bloc.add(
-                                ImportFileAccountAssigned(
+                          ),
+                          onImportAnyway: (fileName) => bloc.add(
+                            ImportMismatchResolved(
+                              fileName: fileName,
+                              decision: MismatchDecision.importAnyway,
+                            ),
+                          ),
+                          onSkipFile: (fileName) => bloc.add(
+                            ImportMismatchResolved(
+                              fileName: fileName,
+                              decision: MismatchDecision.skipFile,
+                            ),
+                          ),
+                          onCreateAccount: (fileName) =>
+                              onCreateAccount(context, fileName),
+                        ),
+                        ImportStep.running => StepProgress(state: state),
+                        ImportStep.summary => StepSummary(
+                          state: state,
+                          onExportErrors: (recordId, fileName) =>
+                              ExportDialog.open(
+                                context,
+                                ExportErrorRowsSource(
+                                  importFileRecordId: recordId,
                                   fileName: fileName,
-                                  accountId: accountId,
                                 ),
                               ),
-                              onImportAnyway: (fileName) => bloc.add(
-                                ImportMismatchResolved(
-                                  fileName: fileName,
-                                  decision: MismatchDecision.importAnyway,
+                          onGoToReconciliation: () =>
+                              context.read<AppShellBloc>().add(
+                                const AppShellNavigationRequested(
+                                  OpenReconciliation(),
                                 ),
                               ),
-                              onSkipFile: (fileName) => bloc.add(
-                                ImportMismatchResolved(
-                                  fileName: fileName,
-                                  decision: MismatchDecision.skipFile,
-                                ),
-                              ),
-                              onCreateAccount: (fileName) =>
-                                  onCreateAccount(context, fileName),
-                            ),
-                            ImportStep.running => StepProgress(state: state),
-                            ImportStep.summary => StepSummary(
-                              state: state,
-                              onExportErrors: (recordId, fileName) =>
-                                  ExportDialog.open(
-                                    context,
-                                    ExportErrorRowsSource(
-                                      importFileRecordId: recordId,
-                                      fileName: fileName,
-                                    ),
-                                  ),
-                              onGoToReconciliation: () =>
-                                  context.read<AppShellBloc>().add(
-                                    const AppShellNavigationRequested(
-                                      OpenReconciliation(),
-                                    ),
-                                  ),
-                            ),
-                          },
-                        ],
+                        ),
+                      },
+                    ],
                   ),
                 ),
               ),
@@ -267,30 +267,112 @@ class _StepperFooter extends StatelessWidget {
     final colors = context.ledger;
     final bloc = context.read<ImportBloc>();
     final blockedReason = _blockedReasonOf(state);
+    final compact = WindowSizeClass.of(MediaQuery.sizeOf(context).width)
+        .usesBottomNavigation;
+
+    // Bản mobile: nút gọn hơn (chữ 14, cao 40) để không chiếm nửa bề ngang.
+    final ButtonStyle? buttonStyle = compact
+        ? const ButtonStyle(
+            textStyle: WidgetStatePropertyAll<TextStyle>(LedgerText.buttonSm),
+            padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+              EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
+            ),
+            minimumSize: WidgetStatePropertyAll<Size>(Size(0, 40)),
+            visualDensity: VisualDensity.compact,
+          )
+        : null;
+
+    final primary = switch (state.step) {
+      ImportStep.pickFiles => FilledButton(
+        style: buttonStyle,
+        onPressed: state.canAssignAccounts
+            ? () => bloc.add(const ImportStepAdvanced())
+            : null,
+        child: const Text('Assign accounts'),
+      ),
+      ImportStep.assignAccounts => FilledButton(
+        style: buttonStyle,
+        onPressed: state.canRun
+            ? () => bloc.add(const ImportRunRequested())
+            : null,
+        child: const Text('Start import'),
+      ),
+      ImportStep.running => const SizedBox.shrink(),
+      ImportStep.summary => FilledButton(
+        style: buttonStyle,
+        onPressed: () => bloc.add(const ImportReset()),
+        child: const Text('Import more files'),
+      ),
+    };
+
+    final leading = <Widget>[
+      if (state.step.canGoBack)
+        OutlinedButton(
+          style: buttonStyle,
+          onPressed: () => bloc.add(const ImportStepReverted()),
+          child: const Text('Back'),
+        ),
+      if (state.isRunning)
+        DestructiveButton(
+          label: state.isCancelling ? 'Cancelling…' : 'Cancel',
+          onPressed: state.isCancelling
+              ? null
+              : () => bloc.add(const ImportRunCancelled()),
+        ),
+    ];
+
+    final decoration = BoxDecoration(
+      color: colors.canvas,
+      border: Border(top: BorderSide(color: colors.hairline)),
+    );
+
+    // Bản mobile: lý do khoá nằm thành một dòng riêng phía trên hàng nút, căn
+    // trái như mọi chữ khác trên màn, thay vì bị ép vào nửa phải cạnh nút.
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(
+          Gap.screen,
+          Gap.sm,
+          Gap.screen,
+          Gap.sm,
+        ),
+        decoration: decoration,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (blockedReason != null) ...<Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(Icons.info_outline, size: 14, color: colors.lemonInk),
+                  const SizedBox(width: Gap.xs),
+                  Expanded(
+                    child: Text(
+                      blockedReason,
+                      style: LedgerText.caption.copyWith(
+                        color: colors.lemonInk,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Gap.sm),
+            ],
+            Row(children: <Widget>[...leading, const Spacer(), primary]),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: Gap.screen,
         vertical: Gap.md,
       ),
-      decoration: BoxDecoration(
-        color: colors.canvas,
-        border: Border(top: BorderSide(color: colors.hairline)),
-      ),
+      decoration: decoration,
       child: Row(
         children: <Widget>[
-          if (state.step.canGoBack)
-            OutlinedButton(
-              onPressed: () => bloc.add(const ImportStepReverted()),
-              child: const Text('Back'),
-            ),
-          if (state.isRunning)
-            DestructiveButton(
-              label: state.isCancelling ? 'Cancelling…' : 'Cancel',
-              onPressed: state.isCancelling
-                  ? null
-                  : () => bloc.add(const ImportRunCancelled()),
-            ),
+          ...leading,
           const Spacer(),
           if (blockedReason != null)
             Flexible(
@@ -303,25 +385,7 @@ class _StepperFooter extends StatelessWidget {
                 ),
               ),
             ),
-          switch (state.step) {
-            ImportStep.pickFiles => FilledButton(
-              onPressed: state.canAssignAccounts
-                  ? () => bloc.add(const ImportStepAdvanced())
-                  : null,
-              child: const Text('Assign accounts'),
-            ),
-            ImportStep.assignAccounts => FilledButton(
-              onPressed: state.canRun
-                  ? () => bloc.add(const ImportRunRequested())
-                  : null,
-              child: const Text('Start import'),
-            ),
-            ImportStep.running => const SizedBox.shrink(),
-            ImportStep.summary => FilledButton(
-              onPressed: () => bloc.add(const ImportReset()),
-              child: const Text('Import more files'),
-            ),
-          },
+          primary,
         ],
       ),
     );
