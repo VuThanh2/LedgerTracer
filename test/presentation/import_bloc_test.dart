@@ -158,6 +158,66 @@ void main() {
   });
 
   group('bước 2 — gán tài khoản', () {
+    test(
+      'bấm thẳng vào một bước: hai bước đầu qua lại được, bước 3 và 4 thì không',
+      () async {
+        picker.files = <PickedFile>[pick('thang-01.csv')];
+        bloc = build();
+        bloc.add(const ImportStarted());
+
+        // Chưa có file thì bước 2 chưa tới được — đúng cùng điều kiện khoá nút
+        // "Assign accounts", không phải một luật riêng của thanh stepper.
+        expect(bloc.state.canJumpTo(ImportStep.assignAccounts), isFalse);
+
+        bloc.add(const ImportFilesPickRequested());
+        await waitFor((state) => state.files.length == 1);
+        expect(bloc.state.canJumpTo(ImportStep.assignAccounts), isTrue);
+
+        bloc.add(const ImportStepSelected(ImportStep.assignAccounts));
+        await waitFor((state) => state.step == ImportStep.assignAccounts);
+
+        // Bước 3 đang chạy và bước 4 là kết cục đã ghi xuống: cả hai không phải
+        // đích của một cú bấm.
+        expect(bloc.state.canJumpTo(ImportStep.running), isFalse);
+        expect(bloc.state.canJumpTo(ImportStep.summary), isFalse);
+        bloc.add(const ImportStepSelected(ImportStep.summary));
+
+        bloc.add(const ImportStepSelected(ImportStep.pickFiles));
+        final back = await waitFor((state) => state.step == ImportStep.pickFiles);
+        // Quay lại không làm mất file đã chọn.
+        expect(back.files, hasLength(1));
+      },
+    );
+
+    test(
+      'vào bước 2 thì nạp lại danh sách tài khoản, thấy cả tài khoản tạo sau '
+      'khi BLoC đã khởi động',
+      () async {
+        // BLoC này sống suốt phiên và được dựng ngay lúc khung ứng dụng lên —
+        // cả bản Web lẫn bản hẹp, vì chỉ báo tác vụ nền đọc nó từ frame đầu.
+        // Danh sách nạp ở `ImportStarted` vì vậy luôn là ảnh chụp trước khi
+        // người dùng kịp mở màn Quản lý tài khoản.
+        picker.files = <PickedFile>[pick('thang-01.csv')];
+        bloc = build();
+        bloc.add(const ImportStarted());
+        bloc.add(const ImportFilesPickRequested());
+        await waitFor((state) => state.files.length == 1);
+        expect(bloc.state.accounts, hasLength(2));
+
+        final accountC = await seed.account('Techcombank hộ kinh doanh');
+
+        bloc.add(const ImportStepAdvanced());
+        final state = await waitFor(
+          (state) => state.step == ImportStep.assignAccounts,
+        );
+
+        expect(
+          state.accounts.map((account) => account.accountId),
+          contains(accountC),
+        );
+      },
+    );
+
     Future<void> pickOne(String name, {String? accountNumber}) async {
       picker.files = <PickedFile>[pick(name, accountNumber: accountNumber)];
       bloc = build();

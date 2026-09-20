@@ -350,7 +350,7 @@ class _FilterButton extends StatelessWidget {
           color: active ? colors.primary : colors.hairlineControl,
         ),
         textStyle: compact ? LedgerText.micro : LedgerText.bodySm,
-        shape: Corner.pillBorder,
+        shape: Corner.buttonBorder,
         padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
         minimumSize: Size(0, compact ? 40 : sizeClass.controlHeight),
       ),

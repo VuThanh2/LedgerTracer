@@ -192,35 +192,35 @@ density:
   touch-target-min: 48px
 
 components:
-  button-primary-pill:
+  button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.on-primary}"
     typography: "{typography.button-md}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.lg}"
     padding: 8px 16px
-  button-primary-pill-pressed:
+  button-primary-pressed:
     backgroundColor: "{colors.primary-press}"
     textColor: "{colors.on-primary}"
     typography: "{typography.button-md}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.lg}"
     padding: 8px 16px
   button-secondary:
     backgroundColor: "{colors.canvas}"
     textColor: "{colors.primary}"
     typography: "{typography.button-md}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.lg}"
     padding: 8px 16px
   button-destructive:
     backgroundColor: "{colors.canvas}"
     textColor: "{colors.ruby-ink}"
     typography: "{typography.button-sm}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.lg}"
     padding: 8px 16px
   button-on-dark:
     backgroundColor: "{colors.brand-dark-900}"
     textColor: "{colors.on-primary}"
     typography: "{typography.button-md}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.lg}"
     padding: 8px 16px
   text-input:
     backgroundColor: "{colors.canvas}"
@@ -429,7 +429,7 @@ Chữ dựng quanh **Sohne** ở weight 300 với tracking âm cho display tier 
 - Đường kẻ sổ cái: hairline nhạt giữa mọi dòng, `{colors.hairline-input}` cứ mỗi 5 dòng, giúp mắt bám hàng khi cuộn qua nghìn dòng.
 - Ba kênh màu tách nhau bằng hình dạng chứ không bằng hue — tiền là chữ màu căn phải, trạng thái là pill có nền, phản hồi là banner có icon.
 - Bề mặt phẳng tuyệt đối: mặc định là elevation 0 cộng viền 1px. Đổ bóng chỉ tồn tại ở menu nổi và dialog.
-- Nút hình pill (`{rounded.pill}`) với padding chặt `8px 16px`, ngắn và dứt khoát.
+- Nút là chữ nhật bo `{rounded.lg}` với padding chặt `8px 16px`, ngắn và dứt khoát. Ở chiều cao nút 40–48dp, 12px là ≈ 0.27 chiều cao: đủ mềm để đọc ra là nút, không mềm tới mức lẫn với pill trạng thái.
 - Density khác nhau theo nền tảng vì tác vụ khác nhau, không vì kích thước màn.
 - **Frame Pulse** — dải vạch chuyển động theo Ticker cạnh mỗi thanh tiến độ. Đây là phần tử chuyển động duy nhất của hệ thống và nó tồn tại vì lý do chức năng.
 
@@ -616,28 +616,29 @@ Bắt buộc: danh sách dài dùng `ListView.builder` hoặc `SliverList`, khô
 | `{rounded.xs}` | 4px | Link, phần tử nhỏ |
 | `{rounded.sm}` | 6px | Ô nhập |
 | `{rounded.md}` | 8px | Card, banner, segmented control, panel Diagnostics |
-| `{rounded.lg}` | 12px | Dialog, thẻ cặp đối soát |
+| `{rounded.lg}` | 12px | **Nút**, dialog, thẻ cặp đối soát |
 | `{rounded.xl}` | 16px | Bottom sheet |
-| `{rounded.pill}` | 9999px | Nút, pill trạng thái, badge, chip |
+| `{rounded.pill}` | 9999px | Pill trạng thái, badge, chip, thanh tiến trình |
 
 ## Components
 
 ### Buttons
 
-**`button-primary-pill`** — nút chính của hệ thống.
-- Nền `{colors.primary}`, chữ `{colors.on-primary}`, kiểu chữ `{typography.button-md}`, padding `{spacing.sm} {spacing.lg}` (8px 16px), bo `{rounded.pill}`.
-- Trạng thái nhấn `button-primary-pill-pressed` đổi nền sang `{colors.primary-press}`.
+**`button-primary`** — nút chính của hệ thống.
+- Nền `{colors.primary}`, chữ `{colors.on-primary}`, kiểu chữ `{typography.button-md}`, padding `{spacing.sm} {spacing.lg}` (8px 16px), bo `{rounded.lg}`.
+- Trạng thái nhấn `button-primary-pressed` đổi nền sang `{colors.primary-press}`.
 - Tối đa một nút filled trên mỗi màn hình.
+- Hình này thay cho `{rounded.pill}`. `{rounded.pill}` ở lại cho pill trạng thái, badge và chip: hình dạng là kênh phân biệt "thứ bấm được" với "nhãn của một dòng", nên hai nhóm không được dùng chung một hình.
 
 **`button-secondary`** — dạng viền.
-- Nền `{colors.canvas}`, chữ `{colors.primary}`, viền 1px `{colors.primary}`, cùng hình học pill.
+- Nền `{colors.canvas}`, chữ `{colors.primary}`, viền 1px `{colors.primary}`, cùng hình học `{rounded.lg}`.
 
 **`button-destructive`** — hành động phá huỷ.
 - Nền `{colors.canvas}`, chữ `{colors.ruby-ink}`, viền 1px `{colors.ruby-ink}`, kiểu chữ `{typography.button-sm}`.
 - Không bao giờ tô nền ruby đặc: hành động phá huỷ cần được chọn có chủ ý, không cần được làm cho hấp dẫn.
 
 **`button-on-dark`** — dùng trên bề mặt tối của màn Diagnostics.
-- Nền `{colors.brand-dark-900}`, chữ `{colors.on-primary}`, cùng hình học pill.
+- Nền `{colors.brand-dark-900}`, chữ `{colors.on-primary}`, cùng hình học `{rounded.lg}`.
 
 ### Data Table
 
@@ -710,7 +711,7 @@ Luồng Nhập là một stepper bốn bước, mỗi bước một quyết đ�
 
 **Tiêu đề bước** dùng `{typography.display-md}`, phụ đề `{typography.caption}` màu `{colors.ink-mute}`. Tiến độ hiển thị bằng thanh mảnh 2px chứ không phải chuỗi vòng tròn đánh số.
 
-**Chân stepper** cố định ở đáy: một `button-primary-pill` bên phải, một `button-secondary` bên trái. Không bao giờ có hai nút cùng độ nổi.
+**Chân stepper** cố định ở đáy: một `button-primary` bên phải, một `button-secondary` bên trái. Không bao giờ có hai nút cùng độ nổi.
 
 ### Reconciliation
 

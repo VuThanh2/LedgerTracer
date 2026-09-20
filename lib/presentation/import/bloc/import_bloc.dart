@@ -70,6 +70,7 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
     on<ImportMismatchResolved>(_onMismatchResolved);
     on<ImportStepAdvanced>(_onStepAdvanced);
     on<ImportStepReverted>(_onStepReverted);
+    on<ImportStepSelected>(_onStepSelected);
     on<ImportRunRequested>(
       _onRunRequested,
       transformer: EventTransformers.droppable(),
@@ -246,12 +247,13 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
     );
   }
 
-  void _onStepAdvanced(ImportStepAdvanced event, Emitter<ImportState> emit) {
+  Future<void> _onStepAdvanced(
+    ImportStepAdvanced event,
+    Emitter<ImportState> emit,
+  ) async {
     switch (state.step) {
       case ImportStep.pickFiles:
-        if (state.canAssignAccounts) {
-          emit(state.copyWith(step: ImportStep.assignAccounts));
-        }
+        if (state.canAssignAccounts) await _enterAssignAccounts(emit);
       case ImportStep.assignAccounts:
         // Bước 2 **chặn cứng**: đi tiếp khi còn file chưa gán hoặc còn cảnh báo
         // chưa trả lời là nhập sao kê vào nhầm tài khoản (UC-02 bước 4).
@@ -265,6 +267,43 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
     if (!state.step.canGoBack) return;
     emit(state.copyWith(step: ImportStep.pickFiles));
   }
+
+  /// Bấm thẳng vào một bước trên thanh stepper.
+  ///
+  /// Luật nằm ở `ImportState.canJumpTo` và được hỏi lại **ở đây**, không phải
+  /// chỉ ở chỗ vẽ nút: thanh stepper là lối đi thứ hai tới cùng những bước ấy,
+  /// và một lối đi thứ hai không được là lối đi vòng qua luật.
+  Future<void> _onStepSelected(
+    ImportStepSelected event,
+    Emitter<ImportState> emit,
+  ) async {
+    if (!state.canJumpTo(event.step)) return;
+    switch (event.step) {
+      case ImportStep.pickFiles:
+        emit(state.copyWith(step: ImportStep.pickFiles));
+      case ImportStep.assignAccounts:
+        await _enterAssignAccounts(emit);
+      case ImportStep.running || ImportStep.summary:
+        // `canJumpTo` đã loại hai bước này; nhánh ở đây chỉ để switch vét cạn.
+        break;
+    }
+  }
+
+  /// Vào bước 2, từ bất kỳ lối nào dẫn tới nó.
+  ///
+  /// Một chỗ duy nhất đặt `step` thành [ImportStep.assignAccounts], nên việc nạp
+  /// lại danh sách tài khoản không thể bị bỏ sót ở lối vào thứ hai.
+  ///
+  /// Phải nạp lại vì BLoC này sống suốt phiên và chỉ nạp một lần ở
+  /// `ImportStarted` — mà lần đó xảy ra lúc khung ứng dụng dựng lên, trước cả
+  /// khi người dùng kịp mở màn Quản lý tài khoản. Không nạp lại thì tài khoản
+  /// vừa tạo ở màn đó không có trong ô chọn, và bước 2 thành ngõ cụt.
+  Future<void> _enterAssignAccounts(Emitter<ImportState> emit) async => emit(
+    state.copyWith(
+      step: ImportStep.assignAccounts,
+      accounts: await _loadAccounts(),
+    ),
+  );
 
   Future<void> _onRunRequested(
     ImportRunRequested event,

@@ -121,6 +121,22 @@ final class ImportState {
       accountsWithTransactions >=
           AccountActivity.minimumAccountsForReconciliation;
 
+  /// Bấm vào [target] trên thanh stepper có nhảy tới được không.
+  ///
+  /// Chỉ hai bước đầu qua lại được với nhau. Bước 3 là một tác vụ đang chạy —
+  /// đường ra của nó là nút Huỷ, không phải một cú bấm ở thanh tiến trình — còn
+  /// bước 4 là kết cục **đã ghi xuống cơ sở dữ liệu**; nhảy vào đó mà chưa chạy
+  /// gì sẽ dựng một bảng tổng kết của một lượt không tồn tại.
+  ///
+  /// Đi tới bước 2 vẫn phải qua đúng điều kiện của nút "Assign accounts": thanh
+  /// stepper là một lối đi khác tới cùng một bước, không phải một lối đi vòng
+  /// qua luật của nó.
+  bool canJumpTo(ImportStep target) => switch ((step, target)) {
+    (ImportStep.assignAccounts, ImportStep.pickFiles) => true,
+    (ImportStep.pickFiles, ImportStep.assignAccounts) => canAssignAccounts,
+    _ => false,
+  };
+
   ImportState copyWith({
     ImportStep? step,
     List<ImportFileEntry>? files,

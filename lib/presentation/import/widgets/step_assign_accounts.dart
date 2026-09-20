@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../domain/entities/bank_account.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/responsive/breakpoints.dart';
 import '../../shared/widgets/banner_message.dart';
 import '../../shared/widgets/verdict_pill.dart';
 import '../bloc/import_state.dart';
@@ -88,6 +89,50 @@ class _AssignRow extends StatelessWidget {
     final borderColor = entry.hasUnresolvedMismatch
         ? colors.lemon
         : colors.hairline;
+    final compact = WindowSizeClass.of(MediaQuery.sizeOf(context).width)
+        .usesBottomNavigation;
+
+    final Widget identity = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          entry.fileName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: LedgerText.bodyMd.copyWith(
+            color: entry.isSkipped ? colors.inkMute : colors.ink,
+          ),
+        ),
+        Text(
+          _subtitleOf(entry),
+          style: LedgerText.caption.copyWith(color: colors.inkMute),
+        ),
+      ],
+    );
+
+    final Widget picker = DropdownButtonFormField<int>(
+      initialValue: entry.accountId,
+      isExpanded: true,
+      style: LedgerText.bodyMd.copyWith(color: colors.ink),
+      decoration: const InputDecoration(hintText: 'Choose an account…'),
+      items: <DropdownMenuItem<int>>[
+        for (final account in accounts)
+          DropdownMenuItem<int>(
+            value: account.accountId,
+            child: Text(
+              account.displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      onChanged: entry.isSkipped
+          ? null
+          : (value) {
+              if (value != null) onAssign(value);
+            },
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,63 +145,38 @@ class _AssignRow extends StatelessWidget {
             borderRadius: Corner.radiusMd,
             border: Border.all(color: borderColor),
           ),
-          child: Wrap(
-            spacing: Gap.md,
-            runSpacing: Gap.md,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              if (format != null)
-                TonePill.soft(context, StepPickFiles.labelOf(format)),
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 200, maxWidth: 360),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+          // Không dùng `Wrap`: ở đó cột tên co theo độ dài tên file, nên ô
+          // chọn tài khoản của mỗi dòng đứng ở một toạ độ khác nhau — một cột
+          // điều khiển răng cưa. `Expanded` đẩy ô chọn về đúng mép phải của
+          // thẻ, giống nhau ở mọi dòng, và tên dài thì cắt bằng ellipsis.
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    Text(
-                      entry.fileName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: LedgerText.bodyMd.copyWith(
-                        color: entry.isSkipped ? colors.inkMute : colors.ink,
-                      ),
+                    Row(
+                      children: <Widget>[
+                        if (format != null) ...<Widget>[
+                          TonePill.soft(context, StepPickFiles.labelOf(format)),
+                          const SizedBox(width: Gap.md),
+                        ],
+                        Expanded(child: identity),
+                      ],
                     ),
-                    Text(
-                      _subtitleOf(entry),
-                      style: LedgerText.caption.copyWith(color: colors.inkMute),
-                    ),
+                    const SizedBox(height: Gap.md),
+                    picker,
+                  ],
+                )
+              : Row(
+                  children: <Widget>[
+                    if (format != null) ...<Widget>[
+                      TonePill.soft(context, StepPickFiles.labelOf(format)),
+                      const SizedBox(width: Gap.md),
+                    ],
+                    Expanded(child: identity),
+                    const SizedBox(width: Gap.md),
+                    SizedBox(width: 236, child: picker),
                   ],
                 ),
-              ),
-              SizedBox(
-                width: 236,
-                child: DropdownButtonFormField<int>(
-                  initialValue: entry.accountId,
-                  isExpanded: true,
-                  style: LedgerText.bodyMd.copyWith(color: colors.ink),
-                  decoration: const InputDecoration(
-                    hintText: 'Choose an account…',
-                  ),
-                  items: <DropdownMenuItem<int>>[
-                    for (final account in accounts)
-                      DropdownMenuItem<int>(
-                        value: account.accountId,
-                        child: Text(
-                          account.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  onChanged: entry.isSkipped
-                      ? null
-                      : (value) {
-                          if (value != null) onAssign(value);
-                        },
-                ),
-              ),
-            ],
-          ),
         ),
         if (entry.mismatch case final check?) ...<Widget>[
           const SizedBox(height: Gap.xs),

@@ -12,10 +12,22 @@ import '../bloc/import_state.dart';
 /// Ở Compact chỉ còn dãy chấm số; nhãn bước đã nằm ngay dưới dưới dạng tiêu đề
 /// `display-md`, nên lặp lại nó ở đây chỉ tốn chiều cao.
 class ImportStepper extends StatelessWidget {
-  const ImportStepper({required this.step, this.showLabels = true, super.key});
+  const ImportStepper({
+    required this.step,
+    required this.canJumpTo,
+    required this.onStepSelected,
+    this.showLabels = true,
+    super.key,
+  });
 
   final ImportStep step;
   final bool showLabels;
+
+  /// Bước nào bấm vào được. Luật thuộc về `ImportState`; widget này chỉ vẽ theo
+  /// câu trả lời của nó, và BLoC vẫn hỏi lại luật một lần nữa khi nhận sự kiện.
+  final bool Function(ImportStep step) canJumpTo;
+
+  final ValueChanged<ImportStep> onStepSelected;
 
   static String labelOf(ImportStep step) => switch (step) {
     ImportStep.pickFiles => 'Choose files',
@@ -52,9 +64,11 @@ class ImportStepper extends StatelessWidget {
     final currentIndex = steps.indexOf(step);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding: EdgeInsets.symmetric(
         horizontal: Gap.screen,
-        vertical: Gap.md,
+        // Bản hẹp thấp hơn một nấc vì chấm ở đó được bọc trong một vùng chạm cao
+        // hơn hẳn chính nó; giữ nguyên Gap.md sẽ đội chiều cao cả thanh lên.
+        vertical: showLabels ? Gap.md : Gap.sm,
       ),
       decoration: BoxDecoration(
         color: colors.canvasSoft,
@@ -66,14 +80,45 @@ class ImportStepper extends StatelessWidget {
     );
   }
 
+  /// Bọc một phần của bước thành vùng bấm, khi bước đó tới được.
+  ///
+  /// Bước không tới được trả về [child] **nguyên vẹn**: không `InkWell` xám,
+  /// không con trỏ bàn tay, không gợn nước khi bấm. Một nút trông bấm được mà
+  /// không làm gì là lời hứa sai, và ở đây lý do không bấm được luôn hiện thành
+  /// chữ ngay dưới chân stepper.
+  Widget _tappable(ImportStep target, Widget child, {Size? minimumSize}) {
+    if (!canJumpTo(target)) {
+      return minimumSize == null
+          ? child
+          : SizedBox.fromSize(size: minimumSize, child: Center(child: child));
+    }
+    final button = InkWell(
+      onTap: () => onStepSelected(target),
+      borderRadius: Corner.pill,
+      child: minimumSize == null
+          ? child
+          : SizedBox.fromSize(size: minimumSize, child: Center(child: child)),
+    );
+    return Tooltip(message: 'Go to step ${target.index + 1}', child: button);
+  }
+
   /// Chỉ có chấm: chấm và đoạn nối xen kẽ trong một hàng phẳng, nên bốn chấm
   /// cách đều nhau — chấm 1 ở mép trái, chấm 4 ở mép phải.
+  ///
+  /// Chấm rộng 20dp là quá nhỏ để chạm bằng ngón tay, nên ở đây nó được bọc
+  /// trong một ô 44×36 — vùng chạm lớn hơn phần nhìn thấy, đúng cách một nút
+  /// nhỏ trên màn hình cảm ứng phải làm. Ô có mặt **cả khi** bước không bấm
+  /// được, nếu không thì thanh stepper đổi chiều cao mỗi lần đổi bước.
   Widget _dotsRow(LedgerColors colors, List<ImportStep> steps, int current) =>
       Row(
         children: <Widget>[
           for (var i = 0; i < steps.length; i++) ...<Widget>[
             if (i > 0) Expanded(child: _connector(colors, i <= current)),
-            _StepDot(number: i + 1, done: i < current, current: i == current),
+            _tappable(
+              steps[i],
+              _StepDot(number: i + 1, done: i < current, current: i == current),
+              minimumSize: const Size(44, 36),
+            ),
           ],
         ],
       );
@@ -102,6 +147,15 @@ class ImportStepper extends StatelessWidget {
       ),
     );
 
+    Widget dot(int i) => _tappable(
+      steps[i],
+      _StepDot(
+        number: i + 1,
+        done: i < currentIndex,
+        current: i == currentIndex,
+      ),
+    );
+
     final last = steps.length - 1;
     return Row(
       children: <Widget>[
@@ -109,23 +163,19 @@ class ImportStepper extends StatelessWidget {
           Expanded(
             child: Row(
               children: <Widget>[
-                _StepDot(
-                  number: i + 1,
-                  done: i < currentIndex,
-                  current: i == currentIndex,
-                ),
+                // Chấm và nhãn là **hai** vùng bấm cạnh nhau chứ không phải một
+                // khối gộp: gộp lại thì cả hai phải nằm trong cùng một `Flexible`,
+                // và tỉ lệ chia chỗ giữa nhãn với đoạn nối — thứ giữ cho cửa sổ
+                // cỡ vừa không bị cắt chữ — đổi theo.
+                dot(i),
                 const SizedBox(width: Gap.sm),
                 // Nhãn được ưu tiên chỗ hơn đoạn nối để cửa sổ cỡ vừa ít bị cắt chữ.
-                Flexible(flex: 3, child: label(i)),
+                Flexible(flex: 3, child: _tappable(steps[i], label(i))),
                 Expanded(child: _connector(colors, i + 1 <= currentIndex)),
               ],
             ),
           ),
-        _StepDot(
-          number: last + 1,
-          done: last < currentIndex,
-          current: last == currentIndex,
-        ),
+        dot(last),
         const SizedBox(width: Gap.sm),
         label(last),
       ],

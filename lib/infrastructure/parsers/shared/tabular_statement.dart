@@ -13,6 +13,27 @@ import 'statement_fields.dart';
 /// những `ParsedRow` — điều kiện để chống trùng giữa hai file khác định dạng của
 /// cùng một tài khoản hoạt động đúng (UC-02).
 abstract final class TabularStatement {
+  /// Dòng này nằm **ngoài** bảng giao dịch hay không.
+  ///
+  /// Sao kê thật không kết thúc ở dòng dữ liệu cuối: bên dưới còn "Tổng số",
+  /// "Số dư cuối kỳ", lời cảm ơn và một đoạn ghi chú pháp lý. Chúng là dòng của
+  /// tờ sao kê, không phải giao dịch.
+  ///
+  /// Dấu hiệu là **ô ngày trống**. Một dòng không có ngày thì [readRow] luôn từ
+  /// chối, nên nó không bao giờ trở thành giao dịch dù xử lý cách nào; câu hỏi
+  /// duy nhất là báo nó thành dòng lỗi hay lặng lẽ bỏ qua. Báo lỗi nghĩa là mỗi
+  /// lần nhập một file Vietcombank đều kèm sáu "lỗi" vốn không phải lỗi, và một
+  /// danh sách lỗi toàn nhiễu là danh sách không còn ai đọc.
+  ///
+  /// Cái giá của lựa chọn này: một file mà cả cột ngày bị lệch sẽ không còn
+  /// dòng lỗi nào để kêu. Parser vì vậy có thêm chốt chặn riêng — tìm được tiêu
+  /// đề mà không đọc nổi một dòng nào thì cả **file** hỏng, không phải im lặng
+  /// báo nhập xong 0 dòng.
+  static bool isOutsideTable({
+    required ColumnLayout layout,
+    required List<String?> cells,
+  }) => layout.read(cells, StatementColumn.date) == null;
+
   /// [rawLine] được nhận dưới dạng hàm chứ không phải chuỗi: nó chỉ cần tới khi
   /// dòng hỏng, mà đường thành công mới là đường chạy hàng trăm nghìn lần. Dựng
   /// sẵn trích đoạn cho mọi dòng là trả chi phí của trường hợp hiếm trên toàn bộ

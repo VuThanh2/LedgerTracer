@@ -138,7 +138,7 @@ class DestructiveButton extends StatelessWidget {
         color: onPressed == null ? colors.hairline : colors.moneyOut,
       ),
       textStyle: LedgerText.buttonSm,
-      shape: Corner.pillBorder,
+      shape: Corner.buttonBorder,
       padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
     );
 

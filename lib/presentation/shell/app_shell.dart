@@ -86,6 +86,34 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
+  /// Đọc lại dữ liệu của một tab đã mở trước đó.
+  ///
+  /// Bốn trang sống suốt phiên trong [TabTransition] và mỗi trang chỉ đọc dữ
+  /// liệu **một lần** ở sự kiện `Started` của nó. Điều đó đúng với một trang chỉ
+  /// đọc thứ nó tự ghi, nhưng ở đây tab Nhập ghi vào đúng bảng mà tab Giao dịch,
+  /// Đối soát và Thống kê đọc: nhập xong rồi sang Giao dịch thì thứ hiện ra là
+  /// ảnh chụp từ lúc khởi động — trống trơn, không một lời giải thích. Quay lại
+  /// một tab là lúc duy nhất biết chắc người dùng sắp nhìn nó, nên đọc lại ở
+  /// đây, không phải sau mỗi lần ghi.
+  ///
+  /// Giao dịch dùng `TransactionsRefreshed` chứ không phải `TransactionsStarted`:
+  /// bộ lọc và từ khoá người dùng đang đặt là của họ, đọc lại dữ liệu không phải
+  /// lý do để xoá chúng.
+  void _refresh(NavDestination destination) {
+    switch (destination) {
+      case NavDestination.transactions:
+        context.read<TransactionsBloc>().add(const TransactionsRefreshed());
+      case NavDestination.reconciliation:
+        context.read<ReconciliationBloc>().add(const ReconciliationStarted());
+      case NavDestination.statistics:
+        context.read<StatisticsBloc>().add(const StatisticsStarted());
+      case NavDestination.import:
+        // Tab Nhập là nơi **ghi**; nó không có ảnh chụp nào để lỡ nhịp, và một
+        // lượt nhập đang chạy thì càng không được khởi động lại.
+        break;
+    }
+  }
+
   /// Tiêu thụ một ý định điều hướng: chuyển tab **và** truyền ngữ cảnh xuống
   /// đúng BLoC, để tập dữ liệu ở đích trùng với thứ người dùng vừa bấm.
   void _consume(PendingNavigation pending) {
@@ -205,7 +233,11 @@ class _AppShellState extends State<AppShell> {
   };
 
   void _select(NavDestination destination) {
+    final wasStarted = _started.contains(destination);
     _ensureStarted(destination);
+    // Đã mở trước đó thì `_ensureStarted` không làm gì, và trang giữ nguyên ảnh
+    // chụp cũ của nó — xem [_refresh].
+    if (wasStarted) _refresh(destination);
     context.read<AppShellBloc>().add(AppShellDestinationSelected(destination));
   }
 }

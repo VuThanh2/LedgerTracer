@@ -34,6 +34,8 @@ final class ExcelParser implements StatementParser {
   Iterable<ParseLineResult> parseLines(Uint8List bytes) sync* {
     final workbook = _XlsxWorkbook.open(bytes);
     ColumnLayout? layout;
+    var rowsRead = 0;
+    var rowsOutsideTable = 0;
 
     for (final row in workbook.rows()) {
       if (layout == null) {
@@ -45,6 +47,11 @@ final class ExcelParser implements StatementParser {
         continue;
       }
       if (row.isBlank) continue;
+      if (TabularStatement.isOutsideTable(layout: layout, cells: row.cells)) {
+        rowsOutsideTable++;
+        continue;
+      }
+      rowsRead++;
       yield TabularStatement.readRow(
         layout: layout,
         cells: row.cells,
@@ -57,6 +64,16 @@ final class ExcelParser implements StatementParser {
       throw const FormatException(
         'No header row with a date column and an amount column was found in the '
       'Excel file.',
+      );
+    }
+    // Chốt chặn đi kèm `isOutsideTable`: dòng không có ngày bị bỏ qua lặng lẽ,
+    // nên một file mà **mọi** dòng đều thiếu ngày sẽ nhập xong với 0 dòng, 0
+    // lỗi — một lời báo thành công cho một lần nhập không nhập được gì. Cột ngày
+    // không khớp dữ liệu là hỏng ở mức file, và phải nói ra như vậy.
+    if (rowsRead == 0 && rowsOutsideTable > 0) {
+      throw const FormatException(
+        'A header row was found, but no row below it carries a transaction '
+      'date, so the date column does not line up with the data.',
       );
     }
   }

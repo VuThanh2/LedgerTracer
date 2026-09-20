@@ -261,8 +261,19 @@ abstract final class Gap {
   static const double screen = 16;
 }
 
-/// Thang bo góc. `pill` là hình của mọi nút — DESIGN.md cấm thay nó bằng hình
-/// chữ nhật bo góc.
+/// Thang bo góc.
+///
+/// `pill` từng là hình của **mọi** nút, và DESIGN.md (bản 2026-09-20 trở về
+/// trước) cấm thay nó bằng hình chữ nhật bo góc. Quy tắc đó đã được chủ sản
+/// phẩm đổi: nút giờ là [buttonBorder] — chữ nhật bo `lg` (12px). Ở chiều cao
+/// nút 40–48dp, 12px cho tỉ lệ bo ≈ 0.27 chiều cao, tức vẫn rõ ràng là một nút
+/// bo tròn chứ không phải một hộp vuông.
+///
+/// `pill` **không** biến mất, và đây là ranh giới phải giữ: nó vẫn là hình của
+/// pill trạng thái, badge, chip và thanh tiến trình. Hình dạng là một kênh ngữ
+/// nghĩa của hệ thống này — người dùng phân biệt "thứ bấm được" với "nhãn của
+/// một dòng" bằng hình trước khi đọc chữ. Cho cả hai cùng một hình là xoá kênh
+/// đó.
 abstract final class Corner {
   static const Radius xs = Radius.circular(4);
   static const Radius sm = Radius.circular(6);
@@ -277,8 +288,13 @@ abstract final class Corner {
   static const BorderRadius radiusXl = BorderRadius.all(xl);
   static const BorderRadius pill = BorderRadius.all(Radius.circular(9999));
 
-  static const RoundedRectangleBorder pillBorder = RoundedRectangleBorder(
-    borderRadius: pill,
+  /// Hình của mọi nút — filled, outlined, text, và các nút tự dựng style riêng.
+  ///
+  /// Khai báo ở đây chứ không rải `radiusLg` vào từng chỗ: hình nút là **một**
+  /// quyết định, và một hằng số chung là thứ giữ cho lần đổi sau không bỏ sót
+  /// một nút nào.
+  static const RoundedRectangleBorder buttonBorder = RoundedRectangleBorder(
+    borderRadius: radiusLg,
   );
 }
 
@@ -626,7 +642,7 @@ abstract final class LedgerTheme {
             EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           ),
           shape: const WidgetStatePropertyAll<OutlinedBorder>(
-            Corner.pillBorder,
+            Corner.buttonBorder,
           ),
           elevation: const WidgetStatePropertyAll<double>(0),
         ),
@@ -645,7 +661,7 @@ abstract final class LedgerTheme {
             EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           ),
           shape: const WidgetStatePropertyAll<OutlinedBorder>(
-            Corner.pillBorder,
+            Corner.buttonBorder,
           ),
         ),
       ),
@@ -656,7 +672,7 @@ abstract final class LedgerTheme {
             LedgerText.buttonSm,
           ),
           shape: const WidgetStatePropertyAll<OutlinedBorder>(
-            Corner.pillBorder,
+            Corner.buttonBorder,
           ),
         ),
       ),

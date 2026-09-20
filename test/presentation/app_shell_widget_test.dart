@@ -29,6 +29,7 @@ import 'package:ledger_tracer/presentation/shell/app_shell.dart';
 import 'package:ledger_tracer/presentation/shell/bloc/app_shell_bloc.dart';
 import 'package:ledger_tracer/presentation/statistics/bloc/statistics_bloc.dart';
 import 'package:ledger_tracer/presentation/transactions/bloc/transactions_bloc.dart';
+import 'package:ledger_tracer/presentation/transactions/widgets/transaction_row_tile.dart';
 
 import '_support/presentation_fixtures.dart';
 
@@ -227,6 +228,19 @@ void main() {
     // Header bảng chỉ tồn tại ở hình thái bảng.
     expect(find.text('COUNTERPARTY'), findsOneWidget);
     expect(find.text('Tài khoản vận hành'), findsWidgets);
+
+    // Dòng bảng phải giữ được mật độ đã thiết kế. Cột ngày từng hẹp tới mức
+    // `dd/MM/yyyy` gãy làm hai dòng, và mỗi dòng cao thêm một nửa — bảng vẫn
+    // dựng được, không test nào đỏ, nhưng đúng cái mật độ mà nó tồn tại để có
+    // thì mất.
+    // Dòng bảng phải giữ được mật độ đã thiết kế. Cột ngày từng hẹp tới mức
+    // `dd/MM/yyyy` gãy làm hai dòng, và mỗi dòng cao thêm một nửa — bảng vẫn
+    // dựng được, không test nào đỏ, nhưng đúng cái mật độ mà nó tồn tại để có
+    // thì mất.
+    final rowHeight = tester
+        .getSize(find.byType(TransactionRowTile).first)
+        .height;
+    expect(rowHeight, lessThanOrEqualTo(40));
   });
 
   testWidgets('bản hẹp dựng danh sách card và bottom nav', (tester) async {
@@ -251,6 +265,25 @@ void main() {
     expect(find.text('By account'), findsOneWidget);
     // Dãy tab loại tiền luôn hiện, kể cả khi chỉ có một loại tiền.
     expect(find.text('VND'), findsWidgets);
+  });
+
+  testWidgets('tab Thống kê ở bản hẹp: ba số tổng gọn lại thành một dòng', (
+    tester,
+  ) async {
+    await pumpAt(tester, const Size(400, 800));
+
+    await tester.tap(find.text('STATISTICS'));
+    await tester.pumpAndSettle();
+
+    // Ba ô tổng xếp dọc theo kiểu hai dòng chiếm gần trọn màn hình đầu tiên của
+    // điện thoại, nên hai biểu đồ — thứ màn hình này thật sự phục vụ — nằm dưới
+    // đường gấp. Ở bản hẹp nhãn và số về cùng một dòng, và chiều cao ô phải nói
+    // lên điều đó.
+    final tile = find.ancestor(
+      of: find.text('MONEY IN'),
+      matching: find.byType(Container),
+    );
+    expect(tester.getSize(tile.first).height, lessThanOrEqualTo(60));
   });
 
   testWidgets('tab Nhập dựng stepper và khoá nút đi tiếp khi chưa có file', (

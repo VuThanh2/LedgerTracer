@@ -150,6 +150,8 @@ class _NewImportTab extends StatelessWidget {
             ImportStepper(
               step: state.step,
               showLabels: !sizeClass.usesBottomNavigation,
+              canJumpTo: state.canJumpTo,
+              onStepSelected: (step) => bloc.add(ImportStepSelected(step)),
             ),
             Expanded(
               child: ViewportCenter(

@@ -56,7 +56,7 @@ class ExportTransactionsButton extends StatelessWidget {
             foregroundColor: colors.primary,
             side: BorderSide(color: colors.primary),
             textStyle: LedgerText.bodySm,
-            shape: Corner.pillBorder,
+            shape: Corner.buttonBorder,
             padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
             minimumSize: Size(0, sizeClass.controlHeight),
           ),

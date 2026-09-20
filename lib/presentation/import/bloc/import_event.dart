@@ -1,4 +1,5 @@
 import '../view_models/import_file_entry.dart';
+import 'import_state.dart';
 
 /// Những gì xảy ra ở tab *Nhập mới* — stepper bốn bước của UC-02.
 sealed class ImportEvent {
@@ -69,6 +70,17 @@ final class ImportStepAdvanced extends ImportEvent {
 /// là kết cục đã ghi xuống.
 final class ImportStepReverted extends ImportEvent {
   const ImportStepReverted();
+}
+
+/// Bấm thẳng vào một bước trên thanh stepper.
+///
+/// Không phải mọi bước đều tới được: `ImportState.canJumpTo` giữ luật, và BLoC
+/// hỏi lại nó chứ không tin vào việc giao diện đã khoá nút — một cú bấm đúng vào
+/// lúc trạng thái vừa đổi vẫn tới được đây.
+final class ImportStepSelected extends ImportEvent {
+  const ImportStepSelected(this.step);
+
+  final ImportStep step;
 }
 
 /// Bước 3 — bắt đầu nhập (UC-02 bước 5).

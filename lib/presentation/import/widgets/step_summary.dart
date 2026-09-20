@@ -96,6 +96,10 @@ class StepSummary extends StatelessWidget {
   }
 }
 
+/// Bề rộng cột Trạng thái, dùng chung cho dòng tiêu đề, các dòng file và dòng
+/// tổng — ba chỗ phải khớp nhau, nếu không thì cột lệch.
+const double _statusColumnWidth = 172;
+
 class _SummaryTable extends StatelessWidget {
   const _SummaryTable({required this.state, required this.onExportErrors});
 
@@ -151,7 +155,7 @@ class _SummaryTable extends StatelessWidget {
                   width: 88,
                   child: headerCell('Errors', align: TextAlign.right),
                 ),
-                SizedBox(width: 140, child: headerCell('Status')),
+                SizedBox(width: _statusColumnWidth, child: headerCell('Status')),
               ],
             ),
           ),
@@ -182,7 +186,7 @@ class _SummaryTable extends StatelessWidget {
                     color: colors.moneyOut,
                   ),
                 ),
-                const SizedBox(width: 140),
+                const SizedBox(width: _statusColumnWidth),
               ],
             ),
           ),
@@ -258,16 +262,27 @@ class _SummaryRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 140,
+            width: _statusColumnWidth,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+              padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
+              // Pill co được và nút tải về thu gọn: cột này có bề rộng **cố
+              // định**, nên một nhãn dài cộng một `IconButton` cỡ mặc định (vùng
+              // chạm 48dp) tràn ra ngoài và đè lên mép bảng. Bề rộng cố định là
+              // thứ giữ các cột số thẳng hàng giữa các dòng, nên thứ phải nhường
+              // là nội dung bên trong nó.
               child: Row(
                 children: <Widget>[
-                  _StatusPill(file: file),
+                  Flexible(child: _StatusPill(file: file)),
                   if (file.hasErrorRows)
                     IconButton(
                       tooltip: 'Export error rows',
                       icon: const Icon(Icons.file_download_outlined, size: 16),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 28,
+                        height: 28,
+                      ),
                       onPressed: () =>
                           onExportErrors(file.recordId, file.fileName),
                     ),
