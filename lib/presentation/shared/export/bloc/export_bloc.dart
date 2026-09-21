@@ -137,6 +137,6 @@ final class ExportBloc extends Bloc<ExportEvent, ExportState> {
   /// xuống thay vì đọc ra một đường dẫn không tồn tại (UC-11).
   String _locationTextOf(SavedFile file) =>
       file.viaBrowserDownload || file.path == null
-      ? 'Downloaded through the browser.'
+      ? "Saved to your browser's downloads."
       : 'Saved to ${file.path}';
 }

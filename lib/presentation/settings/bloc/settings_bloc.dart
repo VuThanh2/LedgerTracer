@@ -148,8 +148,8 @@ final class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
             isSubmitting: false,
             notice: _notices.success(
               event.enabled
-                  ? 'Biometric unlock is on. The PIN still works when the '
-                        'sensor refuses.'
+                  ? 'Biometric unlock is on. Your PIN still works if '
+                        'biometrics fail.'
                   : 'Biometric unlock is off.',
             ),
           ),

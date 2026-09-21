@@ -148,8 +148,7 @@ class PairCard extends StatelessWidget {
               DestructiveButton(label: 'Reject', onPressed: onReject),
               Text(
                 isConfirmed
-                    ? 'Confirmed pairs keep only Reject — there is no separate '
-                          'un-confirm.'
+                    ? 'To undo a confirmation, reject the pair.'
                     : 'Rejecting is remembered forever; this pair will not be '
                           'suggested again.',
                 style: LedgerText.caption.copyWith(color: colors.inkMute),

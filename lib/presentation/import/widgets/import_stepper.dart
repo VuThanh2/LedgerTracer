@@ -48,12 +48,12 @@ class ImportStepper extends StatelessWidget {
       'CSV, Excel, MT940 and JSON statements. PDF is not supported — export CSV '
           'or Excel from your bank instead.',
     ImportStep.assignAccounts =>
-      'Every file needs a destination account before processing can start.',
+      'Choose which bank account each file belongs to.',
     ImportStep.running =>
-      'Rows are committed batch by batch. Cancel takes effect at the next batch '
-          'boundary, and rows already committed stay.',
+      'Transactions are saved in batches as they are read. Cancelling keeps '
+          'everything saved so far.',
     ImportStep.summary =>
-      'Nothing else is pending. You can export the error rows or move on to '
+      'All done. Export the rows that could not be read, or move on to '
           'reconciliation.',
   };
 

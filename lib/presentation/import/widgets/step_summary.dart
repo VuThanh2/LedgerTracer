@@ -42,15 +42,15 @@ class StepSummary extends StatelessWidget {
         if (summary.wasCancelled)
           const BannerMessage(
             FeedbackMessage.warning(
-              'Import was cancelled at a batch boundary. Committed rows are '
-              'kept and this run stays in History so you can revert it.',
+              'Import cancelled. Transactions saved before you cancelled are '
+              'kept — you can undo this run from Import history.',
             ),
           )
         else
           BannerMessage(
             FeedbackMessage.success(
-              'Import finished. ${summary.importedText} new transactions '
-              'committed.',
+              'Import finished: ${summary.importedText} new transactions '
+              'added.',
             ),
           ),
         const SizedBox(height: Gap.lg),

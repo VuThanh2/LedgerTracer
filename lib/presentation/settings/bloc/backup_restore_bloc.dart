@@ -7,6 +7,7 @@ import '../../../core/result/result.dart';
 import '../../shared/bloc/event_transformers.dart';
 import '../../shared/bloc/transient_notice.dart';
 import '../../shared/failures/failure_presenter.dart';
+import '../../shared/failures/feedback_message.dart';
 import '../ports/backup_file_picker.dart';
 import '../view_models/backup_manifest_view_model.dart';
 import 'backup_restore_event.dart';
@@ -114,8 +115,8 @@ final class BackupRestoreBloc
             // Mất mật khẩu là mất luôn file — nhắc lại sau khi lưu, vì đây là
             // lúc người dùng còn nhớ mình vừa đặt cái gì.
             notice: _notices.success(
-              'Backup created. Without that password the file cannot be opened '
-              'again by any means.',
+              'Backup created. Keep the password somewhere safe — without it '
+              'the file cannot be opened.',
             ),
           ),
         );
@@ -132,7 +133,12 @@ final class BackupRestoreBloc
     } on Object catch (error) {
       emit(
         state.copyWith(
-          notice: _notices.danger('Could not open the file picker: $error'),
+          notice: _notices.of(
+            FeedbackMessage.danger(
+              'Could not open the file picker. Try again.',
+              detail: '$error',
+            ),
+          ),
         ),
       );
       return;
@@ -225,7 +231,8 @@ final class BackupRestoreBloc
             clearManifest: true,
             restorePassword: '',
             notice: _notices.success(
-              'Restore finished. Everything that was here before is replaced.',
+              'Restore finished. This device now holds the data from the '
+              'backup.',
             ),
           ),
         );
@@ -246,6 +253,6 @@ final class BackupRestoreBloc
   /// tải xuống thay vì đọc ra một đường dẫn không tồn tại (UC-13).
   String _locationTextOf(BackupLocation location) =>
       location.viaBrowserDownload || location.path == null
-      ? 'Downloaded through the browser.'
+      ? "Saved to your browser's downloads."
       : 'Saved to ${location.path}';
 }

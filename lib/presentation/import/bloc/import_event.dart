@@ -11,6 +11,16 @@ final class ImportStarted extends ImportEvent {
   const ImportStarted();
 }
 
+/// Đọc lại danh sách tài khoản mà không đổi bước đang đứng.
+///
+/// Phát khi người dùng quay về từ Cài đặt — nơi có màn Quản lý tài khoản. Họ
+/// có thể rời đi **ngay giữa bước 2** để tạo tài khoản, và khi quay lại thì
+/// bước 2 không được "đi vào" lần nữa, nên nếu không có sự kiện này ô chọn vẫn
+/// thiếu tài khoản vừa tạo.
+final class ImportAccountsRefreshed extends ImportEvent {
+  const ImportAccountsRefreshed();
+}
+
 /// Bước 1 — bấm chọn file. Mở hộp thoại của nền tảng rồi nhận diện định dạng
 /// từng file (UC-02 bước 1, 2).
 final class ImportFilesPickRequested extends ImportEvent {
@@ -26,6 +36,11 @@ final class ImportFileRemoved extends ImportEvent {
 
 /// Bước 2 — gán tài khoản đích cho một file, rồi đối chiếu số tài khoản
 /// (UC-02 bước 3, 4).
+///
+/// [accountId] `null` là **bỏ gán**: file quay về trạng thái chưa chọn tài
+/// khoản. Gộp vào cùng sự kiện chứ không tách riêng vì hai việc phải xếp hàng
+/// tuần tự với nhau — bỏ gán ngay sau khi gán thì lượt đối chiếu của lần gán,
+/// vốn chạy bất đồng bộ, không được phép về sau và gán lại.
 final class ImportFileAccountAssigned extends ImportEvent {
   const ImportFileAccountAssigned({
     required this.fileName,
@@ -33,7 +48,7 @@ final class ImportFileAccountAssigned extends ImportEvent {
   });
 
   final String fileName;
-  final int accountId;
+  final int? accountId;
 }
 
 /// Tạo tài khoản mới ngay tại bước 2 rồi gán luôn cho file đang xét (UC-01,

@@ -5,6 +5,7 @@ import '../../app/router.dart';
 import '../../app/theme.dart';
 import '../../domain/value_objects/pair_status.dart';
 import '../import/bloc/import_bloc.dart';
+import '../import/bloc/import_event.dart';
 import '../import/bloc/import_state.dart';
 import '../import/import_page.dart';
 import '../reconciliation/bloc/reconciliation_bloc.dart';
@@ -202,9 +203,7 @@ class _AppShellState extends State<AppShell> {
                       destination: state.destination,
                       showLabels: sizeClass.showsNavigationLabels,
                       onSelected: _select,
-                      onSettings: () =>
-                          Navigator.of(context)
-                              .pushNamed(LedgerRoutes.settings),
+                      onSettings: () => _openSettings(context),
                     ),
                     Expanded(child: body),
                   ],
@@ -275,7 +274,7 @@ class _ShellAppBar extends StatelessWidget implements PreferredSizeWidget {
       IconButton(
         tooltip: 'Settings',
         icon: const Icon(Icons.settings_outlined),
-        onPressed: () => Navigator.of(context).pushNamed(LedgerRoutes.settings),
+        onPressed: () => _openSettings(context),
       ),
       const SizedBox(width: Gap.sm),
     ],
@@ -353,4 +352,19 @@ class _BackgroundWorkIndicator extends StatelessWidget {
           ),
     );
   }
+}
+
+/// Mở Cài đặt, rồi báo tab Nhập đọc lại danh sách tài khoản khi quay về.
+///
+/// Màn Quản lý tài khoản nằm dưới Cài đặt, nên đây là lối duy nhất để tài khoản
+/// đổi mà `ImportBloc` không hay. Người dùng hay rời đi đúng lúc đang ở bước 2
+/// — thiếu tài khoản thì mới phải đi tạo — và khi quay lại, bước 2 không được
+/// "đi vào" lần nữa, nên nếu không đọc lại thì ô chọn vẫn là danh sách cũ.
+///
+/// Lấy BLoC **trước** `await`: sau khi route đóng, `context` này có thể không
+/// còn gắn vào cây.
+Future<void> _openSettings(BuildContext context) async {
+  final importBloc = context.read<ImportBloc>();
+  await Navigator.of(context).pushNamed(LedgerRoutes.settings);
+  if (!importBloc.isClosed) importBloc.add(const ImportAccountsRefreshed());
 }

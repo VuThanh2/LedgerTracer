@@ -62,8 +62,8 @@ class DeleteAccountDialog extends StatelessWidget {
     );
     if (impact.cancelsPairs) {
       buffer.write(
-        ' ${impact.reconciledPairText} reconciliation pairs will be dropped, '
-        'and that is not recorded as a rejection.',
+        ' ${impact.reconciledPairText} internal-transfer pairs that use them '
+        'will be removed too.',
       );
     }
     return buffer.toString();

@@ -14,6 +14,7 @@ import '../../../domain/entities/bank_account.dart';
 import '../../shared/bloc/event_transformers.dart';
 import '../../shared/bloc/transient_notice.dart';
 import '../../shared/failures/failure_presenter.dart';
+import '../../shared/failures/feedback_message.dart';
 import '../../shared/queries/account_activity.dart';
 import '../ports/statement_file_picker.dart';
 import '../view_models/import_file_entry.dart';
@@ -53,6 +54,10 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
        _picker = filePicker,
        super(const ImportState()) {
     on<ImportStarted>(_onStarted, transformer: EventTransformers.restartable());
+    on<ImportAccountsRefreshed>(
+      _onAccountsRefreshed,
+      transformer: EventTransformers.restartable(),
+    );
     // Hộp thoại chọn file của nền tảng không được mở hai lần chồng nhau.
     on<ImportFilesPickRequested>(
       _onPickRequested,
@@ -110,6 +115,13 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
     );
   }
 
+  Future<void> _onAccountsRefreshed(
+    ImportAccountsRefreshed event,
+    Emitter<ImportState> emit,
+  ) async {
+    emit(state.copyWith(accounts: await _loadAccounts()));
+  }
+
   Future<void> _onPickRequested(
     ImportFilesPickRequested event,
     Emitter<ImportState> emit,
@@ -123,7 +135,12 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
       emit(
         state.copyWith(
           isPicking: false,
-          notice: _notices.danger('Could not open the file picker: $error'),
+          notice: _notices.of(
+            FeedbackMessage.danger(
+              'Could not open the file picker. Try again.',
+              detail: '$error',
+            ),
+          ),
         ),
       );
       return;
@@ -184,9 +201,15 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
     final recognized = entry?.recognized;
     if (entry == null || recognized == null) return;
 
+    final accountId = event.accountId;
+    if (accountId == null) {
+      emit(state.copyWith(files: _replace(entry.unassigned())));
+      return;
+    }
+
     final check = await _prepare.checkAssignment(
       file: recognized,
-      accountId: event.accountId,
+      accountId: accountId,
     );
     switch (check) {
       case Err<AccountAssignmentCheck>(:final failure):
@@ -196,7 +219,7 @@ final class ImportBloc extends Bloc<ImportEvent, ImportState> {
           state.copyWith(
             files: _replace(
               entry.copyWith(
-                accountId: event.accountId,
+                accountId: accountId,
                 check: value,
                 // Gán lại tài khoản khác là một khởi đầu mới cho phép đối chiếu,
                 // nên quyết định cũ không còn nghĩa gì: giữ nó lại nghĩa là một

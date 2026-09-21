@@ -24,6 +24,11 @@ abstract final class NumberFormatter {
     return '${value < 0 ? '-' : ''}${groupDigits(digits)}';
   }
 
+  /// Số đếm kèm danh từ đúng số ít/số nhiều: `1 file`, `3 files`,
+  /// `1.234 files`. Không có nó thì giao diện tiếng Anh in ra "1 files".
+  static String countOf(int value, String singular, [String? plural]) =>
+      '${count(value)} ${value == 1 ? singular : (plural ?? '${singular}s')}';
+
   /// Chèn dấu phân nhóm vào một chuỗi **chỉ gồm chữ số**, tính từ phải sang.
   static String groupDigits(String digits) {
     if (digits.length <= 3) return digits;

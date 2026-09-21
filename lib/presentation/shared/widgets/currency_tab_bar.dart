@@ -42,7 +42,7 @@ class SegmentedControl<T> extends StatelessWidget {
         ),
     ];
 
-    return Container(
+    final track = Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: colors.canvasSoft,
@@ -56,6 +56,11 @@ class SegmentedControl<T> extends StatelessWidget {
         ],
       ),
     );
+    if (expand) return track;
+    // Không trải rộng thì rãnh ôm vừa các ô. Thiếu `Align`, một cha kiểu
+    // `CrossAxisAlignment.stretch` (như card biểu đồ) kéo rãnh xám ra hết bề
+    // ngang trong khi các ô chỉ nằm ở mép trái — trông như khung bị tràn.
+    return Align(alignment: AlignmentDirectional.centerStart, child: track);
   }
 }
 
@@ -87,25 +92,46 @@ class _Segment<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
+    final duration = Motion.of(context, Motion.short);
     return InkWell(
       onTap: onTap,
       borderRadius: Corner.radiusSm,
-      child: Container(
+      // Ô được chọn nổi lên dần thay vì bật tắt tức thì. Trạng thái "tắt" là
+      // cùng màu và cùng bóng ở alpha 0 — không phải `Colors.transparent` —
+      // để phép nội suy không đi qua một lớp xám đen giữa chừng.
+      child: AnimatedContainer(
+        duration: duration,
+        curve: Motion.curve,
         padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: 6),
         constraints: const BoxConstraints(minHeight: 32),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? colors.canvas : Colors.transparent,
+          color: isSelected
+              ? colors.canvas
+              : colors.canvas.withValues(alpha: 0),
           borderRadius: Corner.radiusSm,
-          boxShadow: isSelected ? Elevations.level1(colors.shadowBlue) : null,
+          boxShadow: <BoxShadow>[
+            for (final shadow in Elevations.level1(colors.shadowBlue))
+              isSelected
+                  ? shadow
+                  : BoxShadow(
+                      color: shadow.color.withValues(alpha: 0),
+                      offset: shadow.offset,
+                      blurRadius: shadow.blurRadius,
+                    ),
+          ],
         ),
-        child: Text(
-          option.label,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        child: AnimatedDefaultTextStyle(
+          duration: duration,
+          curve: Motion.curve,
           style: LedgerText.micro.copyWith(
             color: isSelected ? colors.primaryDeep : colors.inkSecondary,
+          ),
+          child: Text(
+            option.label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),

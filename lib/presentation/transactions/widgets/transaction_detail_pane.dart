@@ -97,8 +97,8 @@ class TransactionDetailPane extends StatelessWidget {
               if (detail.isManuallyEdited) ...<Widget>[
                 const BannerMessage(
                   FeedbackMessage.info(
-                    'This row was edited by hand after the import, so it no '
-                    'longer matches the original file word for word.',
+                    'Edited by hand after import, so it may differ from the '
+                    'original file.',
                   ),
                 ),
                 const SizedBox(height: Gap.lg),

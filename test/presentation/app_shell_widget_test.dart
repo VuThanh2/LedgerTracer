@@ -25,6 +25,7 @@ import 'package:ledger_tracer/presentation/import/bloc/import_history_bloc.dart'
 import 'package:ledger_tracer/presentation/import/ports/statement_file_picker.dart';
 import 'package:ledger_tracer/presentation/reconciliation/bloc/reconciliation_bloc.dart';
 import 'package:ledger_tracer/presentation/shared/export/bloc/export_bloc.dart';
+import 'package:ledger_tracer/presentation/shared/widgets/section_card.dart';
 import 'package:ledger_tracer/presentation/shell/app_shell.dart';
 import 'package:ledger_tracer/presentation/shell/bloc/app_shell_bloc.dart';
 import 'package:ledger_tracer/presentation/statistics/bloc/statistics_bloc.dart';
@@ -266,6 +267,93 @@ void main() {
     // Dãy tab loại tiền luôn hiện, kể cả khi chỉ có một loại tiền.
     expect(find.text('VND'), findsWidgets);
   });
+
+  testWidgets(
+    'tab Thống kê ở bản rộng: hai card biểu đồ cao bằng nhau, chú thích '
+    'thẳng hàng',
+    (tester) async {
+      await pumpAt(tester, const Size(1440, 900));
+
+      await tester.tap(find.text('Statistics').first);
+      await tester.pumpAndSettle();
+
+      Finder card(String title) => find.ancestor(
+        of: find.text(title),
+        matching: find.byType(SectionCard),
+      );
+      final period = tester.getRect(card('By period'));
+      final account = tester.getRect(card('By account'));
+      expect(account.top, period.top);
+      expect(account.height, period.height);
+      expect(account.width, period.width);
+
+      // Chú thích "In" của hai biểu đồ nằm trên cùng một đường ngang.
+      final legends = find.text('In');
+      expect(legends, findsNWidgets(2));
+      expect(
+        tester.getTopLeft(legends.at(0)).dy,
+        tester.getTopLeft(legends.at(1)).dy,
+      );
+    },
+  );
+
+  for (final size in const <Size>[Size(1440, 900), Size(800, 1600)]) {
+    testWidgets(
+      'tab Thống kê dựng đủ hai biểu đồ khi có kỳ không phát sinh tiền ra '
+      '(${size.width.toInt()}px)',
+      (tester) async {
+        // Kỳ có một chiều bằng 0 từng làm `FractionallySizedBox(heightFactor:
+        // 0)` trả chiều cao nội tại NaN, và `IntrinsicHeight` bọc hai card ở
+        // bản rộng gãy theo — cả vùng biểu đồ biến mất. Dữ liệu ở `setUp`
+        // không có kỳ nào như vậy nên không bắt được.
+        await tester.runAsync(() async {
+          for (var a = 0; a < 4; a++) {
+            final account = await seed.account('Tài khoản phụ $a');
+            final record = await seed.fileRecord(
+              accountId: account,
+              name: 'phu-$a.csv',
+            );
+            for (var month = 1; month <= 12; month++) {
+              await seed.transaction(
+                accountId: account,
+                recordId: record,
+                amount: 500000 * month,
+                bookingDate: DateTime.utc(2025, month, 3),
+              );
+              if (month.isEven) {
+                await seed.transaction(
+                  accountId: account,
+                  recordId: record,
+                  amount: -300000 * month,
+                  bookingDate: DateTime.utc(2025, month, 9),
+                );
+              }
+            }
+            await seed.closeRecord(record);
+          }
+        });
+        await pumpAt(tester, size);
+
+        // Medium chỉ có icon trên nav rail.
+        await tester.tap(
+          size.width >= 1024
+              ? find.text('Statistics').first
+              : find.byIcon(Icons.bar_chart).first,
+        );
+        await tester.pumpAndSettle();
+
+        // Theo ngày đã bị bỏ khỏi màn hình này: chỉ còn tháng và năm.
+        expect(find.text('By day'), findsNothing);
+
+        for (final period in const <String>['By year', 'By month']) {
+          await tester.tap(find.text(period));
+          await tester.pumpAndSettle();
+          // Mỗi biểu đồ có một chú thích "In": thấy đủ hai là cả hai đã dựng.
+          expect(find.text('In'), findsNWidgets(2), reason: period);
+        }
+      },
+    );
+  }
 
   testWidgets('tab Thống kê ở bản hẹp: ba số tổng gọn lại thành một dòng', (
     tester,

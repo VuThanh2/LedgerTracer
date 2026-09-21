@@ -8,6 +8,7 @@ import '../../shared/bloc/event_transformers.dart';
 import '../../shared/bloc/load_status.dart';
 import '../../shared/failures/failure_presenter.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/formatting/number_formatter.dart';
 import '../view_models/navigation_intent.dart';
 import 'app_shell_event.dart';
 import 'app_shell_state.dart';
@@ -132,8 +133,9 @@ final class AppShellBloc extends Bloc<AppShellEvent, AppShellState> {
   FeedbackMessage _interruptedNoticeOf(ImportRecoveryReport report) {
     final count = report.interruptedSessionCount;
     return FeedbackMessage.warning(
-      '$count import runs were interrupted last time. Committed rows are kept; '
-      'importing those same files again only fills in what is missing.',
+      '${NumberFormatter.countOf(count, 'import run')} did not finish last '
+      'time. Transactions saved before that are kept; importing the same files '
+      'again only adds the missing ones.',
     );
   }
 }

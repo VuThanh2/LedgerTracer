@@ -368,7 +368,7 @@ class _AccountPicker extends StatelessWidget {
     final colors = context.ledger;
     if (accountNames.isEmpty) {
       return Text(
-        'No accounts declared yet.',
+        'No accounts yet.',
         style: LedgerText.micro.copyWith(color: colors.inkMute),
       );
     }

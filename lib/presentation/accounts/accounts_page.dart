@@ -124,10 +124,10 @@ class _AccountsView extends StatelessWidget {
                       const SizedBox(height: Gap.lg),
                     ],
                   EmptyState(
-                    title: 'No accounts declared yet',
+                    title: 'No accounts yet',
                     message:
-                        'An account is where the transactions of a statement '
-                        'file land. Create one to start importing.',
+                        'Each statement file is imported into one of your bank '
+                        'accounts. Create one to start importing.',
                     icon: Icons.account_balance_outlined,
                     actionLabel: 'Add account',
                     onAction: () => _openForm(context),

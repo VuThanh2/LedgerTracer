@@ -78,8 +78,8 @@ class SecuritySection extends StatelessWidget {
               padding: EdgeInsets.all(Gap.lg),
               child: BannerMessage(
                 FeedbackMessage.info(
-                  'This platform has no biometric unlock, so the app uses a PIN '
-                  'only.',
+                  'Biometric unlock is not available here, so the app uses a '
+                  'PIN only.',
                 ),
               ),
             ),

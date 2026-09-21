@@ -33,8 +33,9 @@ class StepProgress extends StatelessWidget {
             label: _labelOf(state),
             fraction: progress?.sessionFraction,
             detail:
-                'The pulse beside the bar runs off the frame ticker, not the '
-                'data. If it stalls, the interface thread is blocked.',
+                'The moving marks beside the bar show the screen is still '
+                'responsive. If they freeze, the device is struggling to keep '
+                'up.',
           ),
         ),
         const SizedBox(height: Gap.md),
@@ -43,8 +44,8 @@ class StepProgress extends StatelessWidget {
           const SizedBox(height: Gap.md),
           const BannerMessage(
             FeedbackMessage.info(
-              'Cancel requested. It takes effect at the next batch boundary; '
-              'rows already committed stay.',
+              'Cancelling… The current batch finishes first. Everything '
+              'saved so far is kept.',
             ),
           ),
         ],
@@ -55,8 +56,8 @@ class StepProgress extends StatelessWidget {
   static String _labelOf(ImportState state) {
     final progress = state.progress;
     if (progress == null) return 'Preparing…';
-    return '${progress.processedTotalText} rows committed · file '
-        '${progress.completedFiles + 1}/${progress.fileCount} · '
+    return '${progress.processedTotalText} rows read · file '
+        '${progress.completedFiles + 1} of ${progress.fileCount} · '
         '${progress.reportingFileName}';
   }
 }

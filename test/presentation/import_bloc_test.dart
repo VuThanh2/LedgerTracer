@@ -218,6 +218,32 @@ void main() {
       },
     );
 
+    test(
+      'đang đứng ở bước 2 mà tài khoản đổi thì ImportAccountsRefreshed đọc '
+      'lại danh sách, không rời bước',
+      () async {
+        // Người dùng rời bước 2 sang Cài đặt → Quản lý tài khoản để tạo tài
+        // khoản, rồi quay lại: bước 2 không được "đi vào" lần nữa.
+        picker.files = <PickedFile>[pick('thang-01.csv')];
+        bloc = build();
+        bloc.add(const ImportStarted());
+        bloc.add(const ImportFilesPickRequested());
+        await waitFor((state) => state.files.length == 1);
+        bloc.add(const ImportStepAdvanced());
+        await waitFor((state) => state.step == ImportStep.assignAccounts);
+
+        final accountC = await seed.account('Techcombank hộ kinh doanh');
+
+        bloc.add(const ImportAccountsRefreshed());
+        final state = await waitFor(
+          (state) => state.accounts.any((a) => a.accountId == accountC),
+        );
+
+        expect(state.step, ImportStep.assignAccounts);
+        expect(state.files, hasLength(1));
+      },
+    );
+
     Future<void> pickOne(String name, {String? accountNumber}) async {
       picker.files = <PickedFile>[pick(name, accountNumber: accountNumber)];
       bloc = build();
@@ -237,6 +263,46 @@ void main() {
       final state = await waitFor((state) => state.canRun);
       expect(state.unassignedCount, 0);
     });
+
+    test(
+      'bỏ gán đưa file về trạng thái chưa chọn, xoá cả kết quả đối chiếu và '
+      'quyết định cũ',
+      () async {
+        await db.accounts.update(
+          db.accountRows[accountA]!.withAccountNumber('111222333'),
+        );
+        await pickOne('sao-ke.sta', accountNumber: '999888777');
+
+        bloc.add(
+          ImportFileAccountAssigned(fileName: 'sao-ke.sta', accountId: accountA),
+        );
+        await waitFor((state) => state.files.first.check != null);
+        bloc.add(
+          const ImportMismatchResolved(
+            fileName: 'sao-ke.sta',
+            decision: MismatchDecision.skipFile,
+          ),
+        );
+        await waitFor((state) => state.files.first.isSkipped);
+
+        bloc.add(
+          const ImportFileAccountAssigned(
+            fileName: 'sao-ke.sta',
+            accountId: null,
+          ),
+        );
+        final state = await waitFor(
+          (state) => state.files.first.accountId == null,
+        );
+
+        final entry = state.files.first;
+        expect(entry.check, isNull);
+        expect(entry.decision, isNull);
+        expect(entry.isRecognized, isTrue);
+        expect(state.unassignedCount, 1);
+        expect(state.canRun, isFalse);
+      },
+    );
 
     test(
       'số tài khoản lệch phải được trả lời trước khi đi tiếp',

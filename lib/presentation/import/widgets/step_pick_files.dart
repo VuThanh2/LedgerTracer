@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../domain/value_objects/statement_format.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/formatting/number_formatter.dart';
 import '../../shared/widgets/banner_message.dart';
 import '../../shared/widgets/confirm_dialog.dart';
 import '../../shared/widgets/verdict_pill.dart';
@@ -96,9 +97,10 @@ class StepPickFiles extends StatelessWidget {
           const SizedBox(height: Gap.sm),
           BannerMessage(
             FeedbackMessage.warning(
-              '${state.unrecognizedFiles.length} files could not be read and '
-              'will be skipped. They stay in the list so you can see what you '
-              'picked.',
+              '${NumberFormatter.countOf(
+                state.unrecognizedFiles.length,
+                'file',
+              )} could not be read and will be skipped.',
             ),
           ),
         ],

@@ -110,6 +110,7 @@ class StatisticsPage extends StatelessWidget {
               child: _Charts(
                 state: state,
                 compact: compact,
+                sideBySide: sizeClass == WindowSizeClass.expanded,
                 onDrillDown: (bar) {
                   final intent = state.drillDownForBar(bar);
                   if (intent == null) return;
@@ -388,6 +389,7 @@ class _Charts extends StatelessWidget {
   const _Charts({
     required this.state,
     required this.compact,
+    required this.sideBySide,
     required this.onDrillDown,
     required this.onExport,
     required this.onPeriodChanged,
@@ -395,6 +397,11 @@ class _Charts extends StatelessWidget {
 
   final StatisticsState state;
   final bool compact;
+
+  /// Hai card đứng cạnh nhau — chỉ ở Expanded. Ở Medium (600–1023) mỗi card
+  /// chỉ còn chừng 300px: thanh chọn kỳ và dòng số tiền của biểu đồ theo tài
+  /// khoản tràn ngang, nên ở đó hai card xếp chồng như bản hẹp.
+  final bool sideBySide;
   final ValueChanged<CashFlowBarViewModel> onDrillDown;
 
   /// Xuất **đúng biểu đồ** vừa bấm: hai biểu đồ là hai cách gom nhóm khác nhau
@@ -407,10 +414,14 @@ class _Charts extends StatelessWidget {
   Widget build(BuildContext context) {
     final byPeriod = state.byPeriod;
     final byAccount = state.byAccount;
+    // Đứng cạnh nhau thì hai card phải cao bằng nhau; xếp chồng thì mỗi card
+    // giữ chiều cao tự nhiên của nó.
+    final fill = sideBySide;
 
     final periodCard = SectionCard(
+      fill: fill,
       title: 'By period',
-      subtitle: 'Click a column to open those transactions.',
+      subtitle: 'Select a column to see its transactions.',
       trailing: IconButton(
         tooltip: 'Export these figures',
         icon: const Icon(Icons.file_download_outlined, size: 18),
@@ -426,12 +437,22 @@ class _Charts extends StatelessWidget {
           ),
           const SizedBox(height: Gap.xl),
           if (byPeriod != null)
-            CashFlowChart(chart: byPeriod, onBarTapped: onDrillDown),
+            if (fill)
+              Expanded(
+                child: CashFlowChart(
+                  chart: byPeriod,
+                  onBarTapped: onDrillDown,
+                  fill: true,
+                ),
+              )
+            else
+              CashFlowChart(chart: byPeriod, onBarTapped: onDrillDown),
         ],
       ),
     );
 
     final accountCard = SectionCard(
+      fill: fill,
       title: 'By account',
       subtitle: 'Accounts holding ${state.currency?.code} transactions.',
       trailing: IconButton(
@@ -441,10 +462,14 @@ class _Charts extends StatelessWidget {
       ),
       child: byAccount == null
           ? const SizedBox.shrink()
-          : CashFlowChart(chart: byAccount, onBarTapped: onDrillDown),
+          : CashFlowChart(
+              chart: byAccount,
+              onBarTapped: onDrillDown,
+              fill: fill,
+            ),
     );
 
-    if (compact) {
+    if (!sideBySide) {
       return Column(
         children: <Widget>[
           periodCard,
@@ -453,13 +478,19 @@ class _Charts extends StatelessWidget {
         ],
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Expanded(child: periodCard),
-        const SizedBox(width: Gap.lg),
-        Expanded(child: accountCard),
-      ],
+    // `IntrinsicHeight` kéo hai card về chiều cao của card cao hơn. Card theo
+    // kỳ có thêm thanh chọn kỳ và vùng cột 200px, còn card theo tài khoản
+    // thường chỉ vài thanh ngang — không kéo thì card phải hụt hẳn một khúc và
+    // hai chú thích nằm lệch nhau.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Expanded(child: periodCard),
+          const SizedBox(width: Gap.lg),
+          Expanded(child: accountCard),
+        ],
+      ),
     );
   }
 }

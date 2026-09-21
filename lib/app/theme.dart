@@ -325,6 +325,27 @@ abstract final class Elevations {
   ];
 }
 
+/// Thời lượng chuyển động khi đổi trạng thái — không phải animation trang trí.
+///
+/// Chỉ dùng cho chuyển cảnh chức năng: cho mắt theo kịp một thay đổi vừa bấm
+/// (ô segmented đổi chỗ, cột biểu đồ đổi giá trị). Ngắn, không lặp, và tắt hẳn
+/// khi hệ điều hành bật giảm chuyển động.
+abstract final class Motion {
+  /// Đổi trạng thái của một control nhỏ.
+  static const Duration short = Duration(milliseconds: 200);
+
+  /// Dữ liệu biểu đồ đổi giá trị.
+  static const Duration medium = Duration(milliseconds: 280);
+
+  static const Curve curve = Curves.easeOutCubic;
+
+  /// [duration], hoặc 0 khi người dùng đã bật giảm chuyển động.
+  static Duration of(BuildContext context, Duration duration) =>
+      (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
+      ? Duration.zero
+      : duration;
+}
+
 /// Thang chữ của DESIGN.md, dựng thành [TextStyle] dùng trực tiếp.
 ///
 /// Không đi qua `TextTheme` của Material vì ánh xạ 16 bậc của hệ thống này vào

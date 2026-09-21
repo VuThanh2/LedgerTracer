@@ -20,6 +20,7 @@ import '../../shared/bloc/load_status.dart';
 import '../../shared/bloc/transient_notice.dart';
 import '../../shared/failures/failure_presenter.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/formatting/number_formatter.dart';
 import '../../shared/queries/account_activity.dart';
 import '../view_models/pair_view_model.dart';
 import '../view_models/reconciliation_group.dart';
@@ -439,8 +440,8 @@ final class ReconciliationBloc
           state.copyWith(
             matchWindowDays: value.days,
             notice: _notices.info(
-              'The new match window applies to the next scan only; confirmed '
-              'pairs are never touched.',
+              'Match window set to '
+              '± ${NumberFormatter.countOf(value.days, 'day')}.',
             ),
           ),
         );
@@ -617,8 +618,9 @@ final class ReconciliationBloc
   FeedbackMessage _runSummaryOf(RunReconciliationResult result) {
     if (result.wasCancelled) {
       return FeedbackMessage.info(
-        'Stopped midway after finding ${result.suggestedPairsFound} pairs. Run '
-        'the scan again to cover everything.',
+        'Scan stopped early after finding '
+        '${NumberFormatter.countOf(result.suggestedPairsFound, 'pair')}. '
+        'Run it again to cover all transactions.',
       );
     }
     if (result.suggestedPairsFound == 0) {
@@ -628,7 +630,8 @@ final class ReconciliationBloc
       );
     }
     return FeedbackMessage.success(
-      '${result.suggestedPairsFound} pairs are awaiting a decision.',
+      'Found ${NumberFormatter.countOf(result.suggestedPairsFound, 'possible '
+          'internal transfer')} — review them below.',
     );
   }
 

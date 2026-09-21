@@ -9,6 +9,7 @@ import '../../shared/widgets/verdict_pill.dart';
 import '../bloc/import_state.dart';
 import '../view_models/import_file_entry.dart';
 import 'account_mismatch_dialog.dart';
+import 'account_picker.dart';
 import 'step_pick_files.dart';
 
 /// Bước 2: gán tài khoản đích cho từng file (UC-02 b3, b4 · UC-01).
@@ -28,7 +29,9 @@ class StepAssignAccounts extends StatelessWidget {
   });
 
   final ImportState state;
-  final void Function(String fileName, int accountId) onAssign;
+
+  /// `accountId` `null` là bỏ gán.
+  final void Function(String fileName, int? accountId) onAssign;
   final ValueChanged<String> onImportAnyway;
   final ValueChanged<String> onSkipFile;
 
@@ -77,7 +80,7 @@ class _AssignRow extends StatelessWidget {
 
   final ImportFileEntry entry;
   final List<BankAccount> accounts;
-  final ValueChanged<int> onAssign;
+  final ValueChanged<int?> onAssign;
   final VoidCallback onImportAnyway;
   final VoidCallback onSkipFile;
   final VoidCallback onCreateAccount;
@@ -111,27 +114,11 @@ class _AssignRow extends StatelessWidget {
       ],
     );
 
-    final Widget picker = DropdownButtonFormField<int>(
-      initialValue: entry.accountId,
-      isExpanded: true,
-      style: LedgerText.bodyMd.copyWith(color: colors.ink),
-      decoration: const InputDecoration(hintText: 'Choose an account…'),
-      items: <DropdownMenuItem<int>>[
-        for (final account in accounts)
-          DropdownMenuItem<int>(
-            value: account.accountId,
-            child: Text(
-              account.displayName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-      ],
-      onChanged: entry.isSkipped
-          ? null
-          : (value) {
-              if (value != null) onAssign(value);
-            },
+    final Widget picker = AccountPicker(
+      accounts: accounts,
+      selectedId: entry.accountId,
+      enabled: !entry.isSkipped,
+      onChanged: onAssign,
     );
 
     return Column(
@@ -191,16 +178,16 @@ class _AssignRow extends StatelessWidget {
           const SizedBox(height: Gap.xs),
           const BannerMessage(
             FeedbackMessage.info(
-              'This file will be skipped. The run still records it, so the '
-              'history reflects exactly what you picked.',
+              'This file will be skipped. It still shows up in Import history '
+              'as skipped.',
             ),
           ),
         ] else if (entry.willLearnAccountNumber) ...<Widget>[
           const SizedBox(height: Gap.xs),
           const BannerMessage(
             FeedbackMessage.info(
-              'This account has no number yet. The app will learn the number '
-              'read from the file and check against it on later imports.',
+              'This account has no account number yet. The number in this '
+              'file will be saved to it and used to check later imports.',
             ),
           ),
         ],

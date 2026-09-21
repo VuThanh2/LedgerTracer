@@ -96,9 +96,9 @@ class _TransactionEditFormState extends State<TransactionEditForm> {
         if (state.isInReconciledPair) ...<Widget>[
           const BannerMessage(
             FeedbackMessage.warning(
-              'This row belongs to a reconciliation pair. Saving drops the '
-              'pair, and because that is not recorded as a rejection, the next '
-              'scan can suggest a similar pair again.',
+              'This transaction is part of an internal-transfer pair. Saving '
+              'changes removes the pair, and a later scan may suggest a '
+              'similar pair again.',
             ),
           ),
           const SizedBox(height: Gap.lg),

@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../shared/export/view_models/export_source.dart';
 import '../../shared/export/widgets/export_dialog.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/formatting/number_formatter.dart';
 import '../../shared/widgets/banner_message.dart';
 import '../../shared/widgets/confirm_dialog.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -142,7 +143,8 @@ class _SessionCard extends StatelessWidget {
                       style: LedgerText.bodyMd.copyWith(color: colors.ink),
                     ),
                     Text(
-                      '${session.files.length} file · '
+                      '${NumberFormatter.countOf(session.files.length, 'file')}'
+                      ' · '
                       '${session.importedText} new · '
                       '${session.duplicateSkippedText} duplicate · '
                       '${session.errorRowText} errors',

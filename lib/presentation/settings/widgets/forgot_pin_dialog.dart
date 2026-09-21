@@ -39,8 +39,8 @@ class ForgotPinDialog extends StatelessWidget {
       return ConfirmDialog(
         title: 'Forgot your PIN?',
         body:
-            'There is no account and no server, so the PIN cannot be reset. '
-            'The only way back in is to delete all local data.',
+            'LedgerTracer has no online account, so the PIN cannot be reset. '
+            'The only way back in is to delete all data on this device.',
         consequence: const FeedbackMessage.danger(
           'Every transaction, account and reconciliation verdict on this '
           'device is erased. Only a backup file can bring them back.',

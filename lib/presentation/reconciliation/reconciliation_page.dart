@@ -70,8 +70,8 @@ class _ReconciliationPageState extends State<ReconciliationPage> {
       title: 'Run the scan again?',
       body: 'Pairs you have already confirmed or rejected are kept.',
       consequence: FeedbackMessage.danger(
-        'Every one of the ${NumberFormatter.count(state.pendingCount)} pairs '
-        'still awaiting a decision is discarded and rebuilt from scratch.',
+        'The ${NumberFormatter.countOf(state.pendingCount, 'suggestion')} you '
+        'have not decided on yet will be cleared and searched for again.',
       ),
       confirmLabel: 'Run scan',
       cancelLabel: 'Cancel',
@@ -398,9 +398,11 @@ class _NotEnoughAccounts extends StatelessWidget {
     child: EmptyState(
       title: 'Reconciliation needs two accounts',
       message:
-          'Only ${state.accountsWithTransactions} account holds transactions '
-          'so far. An internal match is the same amount showing up in two '
-          'different accounts, so two is the minimum.',
+          'So far only ${NumberFormatter.countOf(
+            state.accountsWithTransactions,
+            'account',
+          )} has transactions. Reconciliation looks for the same amount moving '
+          'between two of your accounts, so it needs at least two.',
       icon: Icons.account_balance_outlined,
       actionLabel: 'Import more statements',
       onAction: () => context.read<AppShellBloc>().add(

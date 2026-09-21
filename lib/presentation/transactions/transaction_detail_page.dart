@@ -133,8 +133,8 @@ class _DetailFailure extends StatelessWidget {
         children: <Widget>[
           const BannerMessage(
             FeedbackMessage.danger(
-              'Could not open this transaction. It may have been deleted, or '
-              'the read failed — try again to find out which.',
+              'Could not open this transaction. It may have been deleted — '
+              'try again.',
             ),
           ),
           const SizedBox(height: Gap.lg),

@@ -71,12 +71,13 @@ abstract final class FailurePresenter {
       // Nền tảng không làm được. Giao diện lẽ ra đã ẩn hẳn tuỳ chọn, nên tới đây
       // nghĩa là lưới an toàn đã đỡ (UC-12, UC-14).
       UnsupportedOnPlatformFailure() => FeedbackMessage.info(
-        'The platform this build runs on does not support that.',
+        'This is not supported on this device.',
         detail: failure.message,
       ),
 
       UnexpectedFailure() => FeedbackMessage.danger(
-        'Something unexpected went wrong.',
+        'Something went wrong. Try again; if it keeps happening, restart '
+        'the app.',
         detail: failure.message,
       ),
     };

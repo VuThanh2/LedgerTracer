@@ -6,6 +6,7 @@ import '../accounts/widgets/account_form_dialog.dart';
 import '../shared/export/view_models/export_source.dart';
 import '../shared/export/widgets/export_dialog.dart';
 import '../shared/failures/feedback_message.dart';
+import '../shared/formatting/number_formatter.dart';
 import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/notice_overlay.dart';
@@ -397,10 +398,11 @@ class _StepperFooter extends StatelessWidget {
     ImportStep.pickFiles when !state.canAssignAccounts =>
       'No readable file yet.',
     ImportStep.assignAccounts when state.unassignedCount > 0 =>
-      '${state.unassignedCount} files still need a destination account.',
+      '${NumberFormatter.countOf(state.unassignedCount, 'file')} still '
+          'need an account.',
     ImportStep.assignAccounts when state.unresolvedMismatchCount > 0 =>
-      '${state.unresolvedMismatchCount} account-number warnings are still '
-          'unresolved.',
+      '${NumberFormatter.countOf(state.unresolvedMismatchCount, 'file')} '
+          'still have an account-number warning to answer.',
     _ => null,
   };
 }
