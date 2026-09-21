@@ -97,8 +97,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   Future<void> _openEditor(BuildContext context, int transactionId) async {
     final bloc = context.read<TransactionsBloc>();
-    final saved = await Navigator.of(context)
-        .push(TransactionEditPage.route(context, transactionId));
+    final saved = await TransactionEditPage.open(context, transactionId);
     if (saved ?? false) {
       bloc.add(TransactionsInvalidated(changedTransactionId: transactionId));
     }

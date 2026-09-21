@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../shared/responsive/breakpoints.dart';
 import '../bloc/diagnostics_state.dart';
 import '../view_models/benchmark_view_model.dart';
 
@@ -84,7 +85,7 @@ class WorkloadControls extends StatelessWidget {
             child: Text(
               'This platform has no isolates, so only the interface-thread '
               'strategy can be measured.',
-              style: LedgerText.caption.copyWith(color: colors.darkInkMute),
+              style: LedgerText.bodySm.copyWith(color: colors.darkInkMute),
             ),
           ),
       ],
@@ -107,7 +108,12 @@ class _ChipGroup extends StatelessWidget {
       children: <Widget>[
         Text(
           label.toUpperCase(),
-          style: LedgerText.microCap.copyWith(color: colors.darkInkMute),
+          style: LedgerText.microCap.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.6,
+            color: colors.darkInkMute,
+          ),
         ),
         const SizedBox(height: Gap.sm),
         Wrap(spacing: Gap.sm, runSpacing: Gap.sm, children: children),
@@ -130,24 +136,42 @@ class _DarkChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
+    final disabled = onTap == null;
+    final compact =
+        WindowSizeClass.of(MediaQuery.sizeOf(context).width) ==
+        WindowSizeClass.compact;
     return InkWell(
       onTap: onTap,
       borderRadius: Corner.pill,
+      // **Không** đặt `alignment` ở [Container]: một Container có alignment mà
+      // không có bề rộng cố định sẽ nở hết ràng buộc cha đưa xuống, và trong
+      // một [Wrap] thì ràng buộc đó là trọn bề ngang màn hình. Đó là lý do mỗi
+      // chip từng chiếm một dòng riêng, kéo bảng điều khiển dài ra vài màn.
+      //
+      // Chiều cao điều khiển bằng đệm dọc chứ không bằng `constraints`: đệm đối
+      // xứng vẫn canh giữa được chữ mà không cần alignment. Con số ở bản hẹp đưa
+      // chip lên ≈ 48dp — vùng chạm tối thiểu của [WindowSizeClass.compact].
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        constraints: const BoxConstraints(minHeight: 32),
-        alignment: Alignment.center,
+        padding: EdgeInsets.symmetric(
+          horizontal: Gap.lg,
+          vertical: compact ? 14 : 9,
+        ),
         decoration: BoxDecoration(
-          color: selected ? colors.primary : Colors.transparent,
+          color: selected ? colors.primarySoft : colors.darkSurface,
           borderRadius: Corner.pill,
           border: Border.all(
-            color: selected ? colors.primary : colors.darkHairline,
+            color: selected ? colors.primarySoft : colors.darkHairline,
           ),
         ),
         child: Text(
           label,
-          style: LedgerText.micro.copyWith(
-            color: selected ? colors.onPrimary : colors.darkInkMute,
+          style: LedgerText.bodySm.copyWith(
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected
+                ? colors.onPrimary
+                : disabled
+                ? colors.darkInkMute
+                : colors.darkInk,
           ),
         ),
       ),

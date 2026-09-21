@@ -82,6 +82,9 @@ class PairCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.ledger;
     final isConfirmed = pair.status == PairStatus.confirmed;
+    // Cùng ngưỡng với [PairLegs]: từ 720dp thẻ đứng ở hình thái hai cột, và dòng
+    // tóm tắt này được nâng cỡ theo để không đứng nhạt hơn hai ô bên dưới.
+    final isWide = MediaQuery.sizeOf(context).width >= 720;
 
     return Container(
       padding: const EdgeInsets.all(Gap.lg),
@@ -105,7 +108,12 @@ class PairCard extends StatelessWidget {
               const InternalBadge(),
               Text(
                 '${pair.amountText} · ${pair.driftText}',
-                style: LedgerText.caption.copyWith(color: colors.inkMute),
+                style: isWide
+                    ? LedgerText.bodyTabular.copyWith(
+                        fontSize: 15,
+                        color: colors.inkSecondary,
+                      )
+                    : LedgerText.caption.copyWith(color: colors.inkMute),
               ),
             ],
           ),

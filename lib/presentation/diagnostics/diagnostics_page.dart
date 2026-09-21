@@ -97,7 +97,12 @@ class _DiagnosticsView extends StatelessWidget {
               Text(
                 'MACHINE: ${state.processorCount} cores · '
                 '${state.supportsIsolates ? 'isolates available' : 'no isolates'}',
-                style: LedgerText.microCap.copyWith(color: colors.darkInkMute),
+                style: LedgerText.microCap.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.6,
+                  color: colors.darkInkMute,
+                ),
               ),
               const SizedBox(height: Gap.md),
 
@@ -153,9 +158,9 @@ class _RunProgress extends StatelessWidget {
                       '${state.strategyCount} · ${state.sampleSize} items · '
                       'batch ${state.batchSize}'
                 : 'Idle.',
-            style: LedgerText.monoLog.copyWith(color: colors.darkInkMute),
+            style: LedgerText.monoLog.copyWith(color: colors.darkInk),
           ),
-          const SizedBox(height: Gap.xs),
+          const SizedBox(height: Gap.sm),
           Text(
             'The pulse runs off the frame ticker. It stalls exactly when the '
             'workload holds the interface thread — which is what the p95 figure '

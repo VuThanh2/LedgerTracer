@@ -88,8 +88,7 @@ class TransactionDetailPage extends StatelessWidget {
 
   Future<void> _openEditor(BuildContext context, int transactionId) async {
     final transactions = context.read<TransactionsBloc>();
-    final saved = await Navigator.of(context)
-        .push(TransactionEditPage.route(context, transactionId));
+    final saved = await TransactionEditPage.open(context, transactionId);
     if (saved ?? false) {
       transactions.add(
         TransactionsInvalidated(changedTransactionId: transactionId),

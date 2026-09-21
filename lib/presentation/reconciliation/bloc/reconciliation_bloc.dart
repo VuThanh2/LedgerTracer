@@ -427,6 +427,13 @@ final class ReconciliationBloc
     }
   }
 
+  /// Đổi cửa sổ ghép cặp **không** phát thông báo khi thành công.
+  ///
+  /// Con số mới đã hiện ngay trên chính điều khiển vừa bấm, nên một câu báo chỉ
+  /// nói lại thứ người dùng đang nhìn. Nó còn có hại: chỉnh từ 1 lên 7 ngày là
+  /// sáu lần bấm, tức sáu thông báo xếp chồng ở mép trên màn hình — đúng chỗ
+  /// nút Chạy quét đứng. Thất bại thì vẫn báo, vì khi ấy con số trên điều khiển
+  /// không phản ánh thứ đã lưu.
   Future<void> _onMatchWindowChanged(
     ReconciliationMatchWindowChanged event,
     Emitter<ReconciliationState> emit,
@@ -436,15 +443,7 @@ final class ReconciliationBloc
       case Err<MatchWindow>(:final failure):
         emit(state.copyWith(notice: _noticeOf(failure, 'match window')));
       case Ok<MatchWindow>(:final value):
-        emit(
-          state.copyWith(
-            matchWindowDays: value.days,
-            notice: _notices.info(
-              'Match window set to '
-              '± ${NumberFormatter.countOf(value.days, 'day')}.',
-            ),
-          ),
-        );
+        emit(state.copyWith(matchWindowDays: value.days));
     }
   }
 
@@ -631,7 +630,7 @@ final class ReconciliationBloc
     }
     return FeedbackMessage.success(
       'Found ${NumberFormatter.countOf(result.suggestedPairsFound, 'possible '
-          'internal transfer')} — review them below.',
+      'internal transfer')} — review them below.',
     );
   }
 

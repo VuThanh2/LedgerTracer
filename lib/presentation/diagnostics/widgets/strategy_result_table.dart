@@ -21,7 +21,7 @@ class StrategyResultTable extends StatelessWidget {
     if (runs.isEmpty) {
       return Text(
         'No run measured yet. Pick a workload and press Run.',
-        style: LedgerText.caption.copyWith(color: colors.darkInkMute),
+        style: LedgerText.bodySm.copyWith(color: colors.darkInkMute),
       );
     }
 
@@ -119,7 +119,11 @@ class _Metric extends StatelessWidget {
         ),
         Text(
           label.toUpperCase(),
-          style: LedgerText.microCap.copyWith(color: colors.darkInkMute),
+          style: LedgerText.microCap.copyWith(
+            fontSize: 12,
+            letterSpacing: 0.6,
+            color: colors.darkInkMute,
+          ),
         ),
       ],
     );
@@ -141,7 +145,7 @@ class _FrameStats extends StatelessWidget {
     if (frames.frameCount == 0) {
       return Text(
         'No frames were recorded during this run.',
-        style: LedgerText.monoLog.copyWith(color: colors.darkInkMute),
+        style: LedgerText.monoLog.copyWith(color: colors.darkInk),
       );
     }
 
@@ -152,7 +156,11 @@ class _FrameStats extends StatelessWidget {
         Text(
           'FRAME TIME · BUDGET '
           '${FrameTimingRecorder.frameBudgetMillis.toStringAsFixed(1)}MS',
-          style: LedgerText.microCap.copyWith(color: colors.darkInkMute),
+          style: LedgerText.microCap.copyWith(
+            fontSize: 12,
+            letterSpacing: 0.6,
+            color: colors.darkInkMute,
+          ),
         ),
         const SizedBox(height: Gap.sm),
         Text(

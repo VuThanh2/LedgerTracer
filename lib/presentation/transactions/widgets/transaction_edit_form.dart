@@ -29,8 +29,14 @@ class TransactionEditForm extends StatefulWidget {
     required this.onDirectionChanged,
     required this.onCounterpartyChanged,
     required this.onDescriptionChanged,
+    this.inDialog = false,
     super.key,
   });
+
+  /// Form đang nằm trong hộp thoại: bỏ lớp vỏ [SectionCard] và phần cuộn của
+  /// riêng nó. Hộp thoại đã là một bề mặt có viền và tự lo việc cuộn, nên giữ
+  /// thêm một card bên trong là vẽ hai cái khung lồng nhau.
+  final bool inDialog;
 
   final TransactionEditState state;
   final ValueChanged<DateTime> onDateChanged;
@@ -90,82 +96,103 @@ class _TransactionEditFormState extends State<TransactionEditForm> {
     final draft = state.draft;
     if (draft == null) return const SizedBox.shrink();
 
+    final banners = <Widget>[
+      if (state.isInReconciledPair) ...<Widget>[
+        const BannerMessage(
+          FeedbackMessage.warning(
+            'This transaction is part of an internal-transfer pair. Saving '
+            'changes removes the pair, and a later scan may suggest a '
+            'similar pair again.',
+          ),
+        ),
+        const SizedBox(height: Gap.lg),
+      ],
+      if (state.error case final FeedbackMessage error) ...<Widget>[
+        BannerMessage(error),
+        const SizedBox(height: Gap.lg),
+      ],
+    ];
+
+    final fields = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        const SectionLabel('Booking date'),
+        TextField(
+          controller: _date,
+          keyboardType: TextInputType.datetime,
+          style: LedgerText.bodyMd.copyWith(color: colors.ink),
+          decoration: const InputDecoration(helperText: 'dd/mm/yyyy'),
+          onChanged: (value) {
+            final parsed = DateFormatter.tryParseDay(value);
+            if (parsed != null) widget.onDateChanged(parsed);
+          },
+        ),
+        const SizedBox(height: Gap.lg),
+
+        const SectionLabel('Direction'),
+        _DirectionToggle(
+          direction: draft.direction,
+          onChanged: widget.onDirectionChanged,
+        ),
+        const SizedBox(height: Gap.lg),
+
+        SectionLabel('Amount (${draft.currency.code})'),
+        TextField(
+          controller: _amount,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: LedgerText.bodyTabular.copyWith(color: colors.ink),
+          decoration: InputDecoration(errorText: state.validation?.amountError),
+          onChanged: widget.onAmountChanged,
+        ),
+        const SizedBox(height: Gap.lg),
+
+        const SectionLabel('Counterparty'),
+        TextField(
+          controller: _counterparty,
+          style: LedgerText.bodyMd.copyWith(color: colors.ink),
+          onChanged: widget.onCounterpartyChanged,
+        ),
+        const SizedBox(height: Gap.lg),
+
+        const SectionLabel('Memo'),
+        TextField(
+          controller: _description,
+          maxLines: 3,
+          minLines: 1,
+          style: LedgerText.bodyMd.copyWith(color: colors.ink),
+          onChanged: widget.onDescriptionChanged,
+        ),
+      ],
+    );
+
+    if (widget.inDialog) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ...banners,
+          // Tên tài khoản là ngữ cảnh của dòng đang sửa, không phải một trường.
+          // Ở route nó là subtitle của card; trong hộp thoại card không còn,
+          // nên nó đứng ngay dưới tiêu đề hộp thoại.
+          Text(
+            'Account: ${state.accountName}',
+            style: LedgerText.caption.copyWith(color: colors.inkMute),
+          ),
+          const SizedBox(height: Gap.lg),
+          fields,
+        ],
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(Gap.screen),
       children: <Widget>[
-        if (state.isInReconciledPair) ...<Widget>[
-          const BannerMessage(
-            FeedbackMessage.warning(
-              'This transaction is part of an internal-transfer pair. Saving '
-              'changes removes the pair, and a later scan may suggest a '
-              'similar pair again.',
-            ),
-          ),
-          const SizedBox(height: Gap.lg),
-        ],
-        if (state.error case final FeedbackMessage error) ...<Widget>[
-          BannerMessage(error),
-          const SizedBox(height: Gap.lg),
-        ],
-
+        ...banners,
         SectionCard(
           title: 'Transaction',
           subtitle: 'Account: ${state.accountName}',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              const SectionLabel('Booking date'),
-              TextField(
-                controller: _date,
-                keyboardType: TextInputType.datetime,
-                style: LedgerText.bodyMd.copyWith(color: colors.ink),
-                decoration: const InputDecoration(helperText: 'dd/mm/yyyy'),
-                onChanged: (value) {
-                  final parsed = DateFormatter.tryParseDay(value);
-                  if (parsed != null) widget.onDateChanged(parsed);
-                },
-              ),
-              const SizedBox(height: Gap.lg),
-
-              const SectionLabel('Direction'),
-              _DirectionToggle(
-                direction: draft.direction,
-                onChanged: widget.onDirectionChanged,
-              ),
-              const SizedBox(height: Gap.lg),
-
-              SectionLabel('Amount (${draft.currency.code})'),
-              TextField(
-                controller: _amount,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                style: LedgerText.bodyTabular.copyWith(color: colors.ink),
-                decoration: InputDecoration(
-                  errorText: state.validation?.amountError,
-                ),
-                onChanged: widget.onAmountChanged,
-              ),
-              const SizedBox(height: Gap.lg),
-
-              const SectionLabel('Counterparty'),
-              TextField(
-                controller: _counterparty,
-                style: LedgerText.bodyMd.copyWith(color: colors.ink),
-                onChanged: widget.onCounterpartyChanged,
-              ),
-              const SizedBox(height: Gap.lg),
-
-              const SectionLabel('Memo'),
-              TextField(
-                controller: _description,
-                maxLines: 3,
-                minLines: 1,
-                style: LedgerText.bodyMd.copyWith(color: colors.ink),
-                onChanged: widget.onDescriptionChanged,
-              ),
-            ],
-          ),
+          child: fields,
         ),
       ],
     );

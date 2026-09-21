@@ -23,6 +23,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     required this.brandDark,
     required this.darkSurface,
     required this.darkHairline,
+    required this.darkInk,
     required this.darkInkMute,
     required this.ink,
     required this.inkSecondary,
@@ -57,8 +58,9 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     primaryWash: Color(0xFFEEECFF),
     brandDark: Color(0xFF1C1E54),
     darkSurface: Color(0xFF262A63),
-    darkHairline: Color(0xFF33377A),
-    darkInkMute: Color(0xFF8E96C4),
+    darkHairline: Color(0xFF3C41A0),
+    darkInk: Color(0xFFE7E9F8),
+    darkInkMute: Color(0xFFA9B0DE),
     ink: Color(0xFF0D253D),
     inkSecondary: Color(0xFF273951),
     inkMute: Color(0xFF64748D),
@@ -92,6 +94,15 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
   final Color brandDark;
   final Color darkSurface;
   final Color darkHairline;
+
+  /// Mực chính trên nền tối — nhãn, số đo, dòng trạng thái.
+  ///
+  /// Bảng tối chỉ có một bậc mực cho tới khi token này ra đời, nên mọi chữ ở màn
+  /// Diagnostics đều nằm ở bậc "mờ": không có gì nổi lên thì cũng không có gì
+  /// lùi xuống, và cả màn hình đọc như chú thích. Hai bậc [darkInk] /
+  /// [darkInkMute] là để phân tầng đó tồn tại.
+  final Color darkInk;
+
   final Color darkInkMute;
 
   final Color ink;
@@ -150,6 +161,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     Color? brandDark,
     Color? darkSurface,
     Color? darkHairline,
+    Color? darkInk,
     Color? darkInkMute,
     Color? ink,
     Color? inkSecondary,
@@ -182,6 +194,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     brandDark: brandDark ?? this.brandDark,
     darkSurface: darkSurface ?? this.darkSurface,
     darkHairline: darkHairline ?? this.darkHairline,
+    darkInk: darkInk ?? this.darkInk,
     darkInkMute: darkInkMute ?? this.darkInkMute,
     ink: ink ?? this.ink,
     inkSecondary: inkSecondary ?? this.inkSecondary,
@@ -220,6 +233,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
       brandDark: mix(brandDark, other.brandDark),
       darkSurface: mix(darkSurface, other.darkSurface),
       darkHairline: mix(darkHairline, other.darkHairline),
+      darkInk: mix(darkInk, other.darkInk),
       darkInkMute: mix(darkInkMute, other.darkInkMute),
       ink: mix(ink, other.ink),
       inkSecondary: mix(inkSecondary, other.inkSecondary),
@@ -539,10 +553,13 @@ abstract final class LedgerText {
     fontFeatures: <FontFeature>[ss01],
   );
 
+  /// Dòng log ở màn Diagnostics. Cỡ 13 chứ không 12: nó là **nội dung** của màn
+  /// đó — số đo và trạng thái lượt chạy — chứ không phải chú thích của một khối
+  /// khác, và ở 12px trên nền tối nó đọc như thứ đã bị làm mờ có chủ ý.
   static const TextStyle monoLog = TextStyle(
     fontFamily: 'JetBrains Mono',
     fontFamilyFallback: <String>['Consolas', 'Menlo', 'monospace'],
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
     height: 1.55,
     fontFeatures: <FontFeature>[FontFeature.slashedZero()],
@@ -757,6 +774,38 @@ abstract final class LedgerTheme {
         foregroundColor: colors.onPrimary,
         titleTextStyle: LedgerText.headingSm.copyWith(color: colors.onPrimary),
         shape: Border(bottom: BorderSide(color: colors.darkHairline)),
+      ),
+      // Nút chữ của bảng sáng dùng mực `primary` — chính là màu nền của màn
+      // này, nên trên nền tối nó gần như biến mất. Bảng tối phải có màu nút
+      // riêng, nếu không "Clear results" đọc như một nút đã bị khoá.
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colors.primarySubdued,
+          disabledForegroundColor: colors.darkInkMute.withValues(alpha: 0.45),
+          textStyle: LedgerText.buttonSm,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colors.primarySubdued,
+          disabledForegroundColor: colors.darkInkMute.withValues(alpha: 0.45),
+          side: BorderSide(color: colors.darkHairline),
+          textStyle: LedgerText.buttonSm,
+          shape: Corner.buttonBorder,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: colors.primarySoft,
+          foregroundColor: colors.onPrimary,
+          disabledBackgroundColor: colors.darkSurface,
+          disabledForegroundColor: colors.darkInkMute,
+          textStyle: LedgerText.buttonSm,
+          shape: Corner.buttonBorder,
+          // 44dp là sàn vùng chạm: màn này mở được cả trên điện thoại.
+          minimumSize: const Size(64, 44),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+        ),
       ),
       dividerColor: colors.darkHairline,
     );

@@ -205,6 +205,11 @@ class _Toolbar extends StatelessWidget {
       child: const Text('Run scan'),
     );
 
+    // Xuất nhóm đang xem. Đứng cạnh bộ chọn nhóm chứ không ở cuối danh sách:
+    // thứ nó xuất ra là đúng nhóm đang chọn, và ở cuối một danh sách cuộn vô
+    // hạn thì nó chỉ tới được sau khi cuộn hết những gì đã nạp.
+    final exportButton = _ExportGroupButton(state: state, iconOnly: compact);
+
     return Container(
       padding: const EdgeInsets.all(Gap.screen),
       decoration: BoxDecoration(
@@ -215,7 +220,15 @@ class _Toolbar extends StatelessWidget {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Row(children: <Widget>[matchWindow, const Spacer(), runButton]),
+                Row(
+                  children: <Widget>[
+                    matchWindow,
+                    const Spacer(),
+                    exportButton,
+                    const SizedBox(width: Gap.sm),
+                    runButton,
+                  ],
+                ),
                 const SizedBox(height: Gap.md),
                 segmented,
               ],
@@ -228,15 +241,69 @@ class _Toolbar extends StatelessWidget {
                   child: Text(
                     'Applies to the next scan only. Confirmed pairs are never '
                     'touched.',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: LedgerText.caption.copyWith(color: colors.inkMute),
                   ),
                 ),
                 const Spacer(),
                 segmented,
                 const SizedBox(width: Gap.md),
+                exportButton,
+                const SizedBox(width: Gap.sm),
                 runButton,
               ],
             ),
+    );
+  }
+}
+
+/// Xuất nhóm phán quyết đang xem.
+///
+/// Tắt khi nhóm rỗng thay vì biến mất: một nút nhấp nháy theo số đếm làm thanh
+/// công cụ nhảy chỗ mỗi lần đổi nhóm. Xuất một nhóm rỗng thì ra một file rỗng,
+/// nên nó bị khoá chứ không bị giấu.
+class _ExportGroupButton extends StatelessWidget {
+  const _ExportGroupButton({required this.state, required this.iconOnly});
+
+  final ReconciliationState state;
+
+  /// Thu về một icon khi chỗ đứng không đủ rộng cho nhãn.
+  final bool iconOnly;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.ledger;
+    final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
+    final onPressed = state.countOf(state.group) == 0
+        ? null
+        : () => ExportDialog.open(
+            context,
+            ExportReconciliationSource(
+              status: state.group.pairStatus,
+              groupLabel: state.group.label,
+            ),
+          );
+
+    if (iconOnly) {
+      return IconButton(
+        tooltip: 'Export this group',
+        icon: const Icon(Icons.file_download_outlined),
+        onPressed: onPressed,
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colors.primary,
+        side: BorderSide(color: colors.primary),
+        textStyle: LedgerText.bodySm,
+        shape: Corner.buttonBorder,
+        padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+        minimumSize: Size(0, sizeClass.controlHeight),
+      ),
+      icon: const Icon(Icons.file_download_outlined, size: 16),
+      label: const Text('Export'),
     );
   }
 }
@@ -348,20 +415,6 @@ class _GroupBody extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: Gap.lg),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: () => ExportDialog.open(
-                context,
-                ExportReconciliationSource(
-                  status: state.group.pairStatus,
-                  groupLabel: state.group.label,
-                ),
-              ),
-              icon: const Icon(Icons.file_download_outlined, size: 16),
-              label: const Text('Export this group'),
-            ),
-          ),
         ],
       ),
     );
@@ -398,10 +451,7 @@ class _NotEnoughAccounts extends StatelessWidget {
     child: EmptyState(
       title: 'Reconciliation needs two accounts',
       message:
-          'So far only ${NumberFormatter.countOf(
-            state.accountsWithTransactions,
-            'account',
-          )} has transactions. Reconciliation looks for the same amount moving '
+          'So far only ${NumberFormatter.countOf(state.accountsWithTransactions, 'account')} has transactions. Reconciliation looks for the same amount moving '
           'between two of your accounts, so it needs at least two.',
       icon: Icons.account_balance_outlined,
       actionLabel: 'Import more statements',
