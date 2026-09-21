@@ -258,8 +258,7 @@ final class ReconciliationBloc
       emit(
         state.copyWith(
           notice: _notices.info(
-            'Reconciliation needs at least two accounts holding transactions '
-            'before there is anything to match.',
+            'Import statements for at least two accounts first.',
           ),
         ),
       );
@@ -390,7 +389,7 @@ final class ReconciliationBloc
             // quả lâu dài của một cú bấm trông như chỉ xoá một dòng (UC-09).
             status: LoadStatus.loading,
             notice: _notices.info(
-              'Rejection recorded. This pair will not be suggested again.',
+              'Pair rejected. It will not be suggested again.',
             ),
             undoableRejectionId: value.rejectedMatchId,
           ),
@@ -416,8 +415,7 @@ final class ReconciliationBloc
             // vừa "được khôi phục" mà không có ở đâu cả.
             status: LoadStatus.loading,
             notice: _notices.success(
-              'Rejection lifted. This pair becomes a candidate again on the '
-              'next scan.',
+              'Rejection undone. The pair can be suggested on the next scan.',
             ),
             clearUndoableRejection: true,
           ),
@@ -617,20 +615,18 @@ final class ReconciliationBloc
   FeedbackMessage _runSummaryOf(RunReconciliationResult result) {
     if (result.wasCancelled) {
       return FeedbackMessage.info(
-        'Scan stopped early after finding '
-        '${NumberFormatter.countOf(result.suggestedPairsFound, 'pair')}. '
-        'Run it again to cover all transactions.',
+        'Scan stopped early — '
+        '${NumberFormatter.countOf(result.suggestedPairsFound, 'pair')} found.',
       );
     }
     if (result.suggestedPairsFound == 0) {
       return const FeedbackMessage.info(
-        'No internal transfer pairs found. Try widening the match window if '
-        'the two statements book the transfer on different days.',
+        'No internal transfers found. Try a wider match window.',
       );
     }
     return FeedbackMessage.success(
       'Found ${NumberFormatter.countOf(result.suggestedPairsFound, 'possible '
-      'internal transfer')} — review them below.',
+      'transfer')} to review.',
     );
   }
 

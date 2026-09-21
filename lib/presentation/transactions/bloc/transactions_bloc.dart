@@ -8,6 +8,7 @@ import '../../../core/result/failure.dart';
 import '../../../core/result/result.dart';
 import '../../../domain/entities/transaction.dart';
 import '../../../domain/repositories/transaction_repository.dart';
+import '../../../domain/value_objects/currency.dart';
 import '../../../domain/value_objects/search_text.dart';
 import '../../shared/bloc/event_transformers.dart';
 import '../../shared/bloc/load_status.dart';
@@ -142,10 +143,64 @@ final class TransactionsBloc
     await _reload(emit);
   }
 
+  /// Đọc lại danh sách **và** hai bảng tra của Filter Panel.
+  ///
+  /// Tài khoản và loại tiền trước đây chỉ đọc ở `Started`, tức một lần mỗi
+  /// phiên — tạo tài khoản ở Cài đặt hay ở bước 2 của tab Nhập rồi quay lại thì
+  /// ô chọn tài khoản vẫn là danh sách lúc mở app, và phải tắt app mới thấy.
+  /// Nhập một file USD đầu tiên cũng vậy với ô loại tiền.
+  ///
+  /// Bộ lọc người dùng đang đặt được giữ nguyên, trừ phần trỏ vào thứ không còn
+  /// tồn tại (tài khoản đã xoá, loại tiền không còn giao dịch nào sau khi khôi
+  /// phục bản sao lưu): giữ lại chúng là một danh sách trống không lời giải
+  /// thích, kèm một chip không có tên.
   Future<void> _onRefreshed(
     TransactionsRefreshed event,
     Emitter<TransactionsState> emit,
-  ) => _reload(emit);
+  ) async {
+    final accountNames = await _loadAccountNames();
+    final currencies = await _loadCurrencies();
+
+    var draft = state.draft;
+    var filter = state.filter;
+    final keptDraftIds = draft.accountIds.where(accountNames.containsKey);
+    if (keptDraftIds.length != draft.accountIds.length) {
+      draft = draft.copyWith(accountIds: keptDraftIds.toSet());
+    }
+    final keptFilterIds = filter.accountIds.where(accountNames.containsKey);
+    if (keptFilterIds.length != filter.accountIds.length) {
+      filter = TransactionFilter(
+        keyword: filter.keyword,
+        accountIds: keptFilterIds,
+        dateRange: filter.dateRange,
+        amountRange: filter.amountRange,
+        currency: filter.currency,
+        importFileRecordId: filter.importFileRecordId,
+        excludeInternalTransfers: filter.excludeInternalTransfers,
+      );
+    }
+    final inUse = <Currency>{for (final usage in currencies) usage.currency};
+    if (currencies.isNotEmpty && !inUse.contains(draft.currency)) {
+      // Loại tiền của bản nháp đã biến mất: về loại phổ biến nhất như lúc mở
+      // màn hình, và tắt tiêu chí loại tiền — nó là tiêu chí trên một thứ
+      // không còn dòng nào.
+      draft = draft.copyWith(
+        currency: currencies.first.currency,
+        filterByCurrency: false,
+      );
+    }
+
+    emit(
+      state.copyWith(
+        status: LoadStatus.loading,
+        accountNames: accountNames,
+        currencies: currencies,
+        draft: draft,
+        filter: filter,
+      ),
+    );
+    await _reload(emit);
+  }
 
   /// Sau một lần sửa ở biểu mẫu riêng: đọc lại danh sách, và đọc lại cả chi tiết
   /// đang mở nếu đúng là dòng vừa đổi.

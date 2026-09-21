@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../shared/responsive/breakpoints.dart';
 import '../../shared/widgets/confirm_dialog.dart';
 import '../view_models/account_view_model.dart';
 
@@ -25,6 +26,8 @@ class AccountListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
+    final compact = WindowSizeClass.of(MediaQuery.sizeOf(context).width)
+        .usesBottomNavigation;
     return Container(
       constraints: const BoxConstraints(minHeight: 52),
       padding: const EdgeInsets.all(Gap.lg),
@@ -47,14 +50,38 @@ class AccountListTile extends StatelessWidget {
                   style: LedgerText.bodyMd.copyWith(color: colors.ink),
                 ),
                 const SizedBox(height: Gap.xxs),
+                if (!account.hasAccountNumber)
                 Text(
-                  account.hasAccountNumber
-                      ? 'Learned number: ${account.accountNumber}'
-                      : 'No account number learned from any file yet.',
+                    'No account number learned from any file yet.',
+                    style: LedgerText.caption.copyWith(color: colors.inkMute),
+                  )
+                else if (compact) ...<Widget>[
+                  // Bản hẹp: nhãn và số **luôn** ở hai dòng. Chung một dòng thì
+                  // cột chữ — đã bị hai nút Edit/Delete chiếm mất một phần bề
+                  // ngang — xuống dòng hay không tuỳ độ dài số tài khoản, nên
+                  // thẻ này số nằm cạnh nhãn còn thẻ kia số rơi xuống dưới.
+                  // Tách cố định thì mọi thẻ cùng một hình dạng, và số tài
+                  // khoản không bao giờ bị ngắt giữa chừng.
+                  Text(
+                    'Learned number',
                   style: LedgerText.caption.copyWith(
-                    color: account.hasAccountNumber
-                        ? colors.inkSecondary
-                        : colors.inkMute,
+                      color: colors.inkSecondary,
+                    ),
+                  ),
+                  Text(
+                    account.accountNumber,
+                    style: LedgerText.caption.copyWith(
+                      color: colors.ink,
+                      fontFeatures: const <FontFeature>[
+                        FontFeature.tabularFigures(),
+                      ],
+                    ),
+                  ),
+                ] else
+                  Text(
+                    'Learned number: ${account.accountNumber}',
+                    style: LedgerText.caption.copyWith(
+                      color: colors.inkSecondary,
                   ),
                 ),
                 Text(

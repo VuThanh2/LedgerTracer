@@ -60,6 +60,15 @@ final class FilterChipViewModel {
 /// file xuất (UC-11): hai bản mô tả chép tay của cùng một tập tiêu chí là hai
 /// bản sẽ lệch nhau, và khi lệch thì file xuất nói dối về dữ liệu bên trong nó.
 abstract final class FilterChips {
+  /// Một chip cho cả nhóm tài khoản, vì gỡ chip là gỡ cả tiêu chí. Tối đa hai
+  /// tên; nhiều hơn thì đếm — một chip dài cả dòng đẩy mọi chip khác xuống.
+  static String _accountsLabel(Set<int> ids, Map<int, String> names) {
+    String nameOf(int id) => names[id] ?? '#$id';
+    if (ids.length == 1) return 'Account: ${nameOf(ids.single)}';
+    if (ids.length == 2) return 'Accounts: ${ids.map(nameOf).join(', ')}';
+    return '${ids.length} accounts';
+  }
+
   static List<FilterChipViewModel> of({
     required TransactionFilter filter,
     required TransactionContext context,
@@ -70,12 +79,10 @@ abstract final class FilterChips {
         kind: FilterChipKind.keyword,
         label: 'Keyword: ${filter.keyword}',
       ),
-    if (filter.accountId != null)
+    if (filter.accountIds.isNotEmpty)
       FilterChipViewModel(
         kind: FilterChipKind.account,
-        label:
-            'Account: '
-            '${accountNames[filter.accountId] ?? filter.accountId}',
+        label: _accountsLabel(filter.accountIds, accountNames),
       ),
     if (filter.dateRange != null)
       FilterChipViewModel(

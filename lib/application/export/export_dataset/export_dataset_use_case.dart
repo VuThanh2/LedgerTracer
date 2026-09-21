@@ -356,8 +356,9 @@ final class ExportDatasetUseCase {
         : await _imports.findFileRecordById(recordId);
     return <String>[
       if (filter.keyword != null) 'Keyword: ${filter.keyword}',
-      if (filter.accountId != null)
-        'Account: ${names[filter.accountId] ?? filter.accountId}',
+      if (filter.accountIds.isNotEmpty)
+        '${filter.accountIds.length == 1 ? 'Account' : 'Accounts'}: '
+            '${filter.accountIds.map((id) => names[id] ?? '$id').join(', ')}',
       if (filter.dateRange != null) 'Date range: ${filter.dateRange}',
       if (filter.amountRange != null) 'Amount range: ${filter.amountRange}',
       if (filter.currency != null) 'Currency: ${filter.currency!.code}',

@@ -116,7 +116,15 @@ class ImportStepper extends StatelessWidget {
             if (i > 0) Expanded(child: _connector(colors, i <= current)),
             _tappable(
               steps[i],
-              _StepDot(number: i + 1, done: i < current, current: i == current),
+              _StepDot(
+                number: i + 1,
+                done: i < current,
+                current: i == current,
+                // Không có nhãn, không có con trỏ chuột và không có hover: trên
+                // màn cảm ứng, vòng sáng này là thứ duy nhất nói rằng chấm bấm
+                // được.
+                reachable: i != current && canJumpTo(steps[i]),
+              ),
               minimumSize: const Size(44, 36),
             ),
           ],
@@ -188,11 +196,17 @@ class _StepDot extends StatelessWidget {
     required this.number,
     required this.done,
     required this.current,
+    this.reachable = false,
   });
 
   final int number;
   final bool done;
   final bool current;
+
+  /// Bấm vào được để chuyển tới bước này: viền `primary` và một vòng sáng
+  /// `primary-wash` bao quanh. Chỉ bản hẹp bật nó; bản rộng đã có nhãn bấm
+  /// được và con trỏ bàn tay làm việc đó.
+  final bool reachable;
 
   @override
   Widget build(BuildContext context) {
@@ -206,15 +220,22 @@ class _StepDot extends StatelessWidget {
         shape: BoxShape.circle,
         color: filled ? colors.primary : colors.canvas,
         border: Border.all(
-          color: filled ? colors.primary : colors.hairlineControl,
+          color: filled || reachable ? colors.primary : colors.hairlineControl,
         ),
+        boxShadow: reachable
+            ? <BoxShadow>[BoxShadow(color: colors.primaryWash, spreadRadius: 4)]
+            : null,
       ),
       child: done
           ? Icon(Icons.check, size: 12, color: colors.onPrimary)
           : Text(
               '$number',
               style: LedgerText.microCap.copyWith(
-                color: filled ? colors.onPrimary : colors.inkSecondary,
+                color: filled
+                    ? colors.onPrimary
+                    : reachable
+                    ? colors.primary
+                    : colors.inkSecondary,
               ),
             ),
     );

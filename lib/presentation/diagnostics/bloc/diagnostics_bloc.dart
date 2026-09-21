@@ -1,5 +1,7 @@
 import 'package:bloc/bloc.dart';
 
+import '../../../application/diagnostics/probe_runtime/probe_runtime_dto.dart';
+import '../../../application/diagnostics/probe_runtime/probe_runtime_use_case.dart';
 import '../../../application/diagnostics/run_benchmark/run_benchmark_dto.dart';
 import '../../../application/diagnostics/run_benchmark/run_benchmark_use_case.dart';
 import '../../../core/concurrency/concurrency_strategy.dart';
@@ -9,6 +11,7 @@ import '../../shared/bloc/event_transformers.dart';
 import '../../shared/failures/failure_presenter.dart';
 import '../frame_timing_recorder.dart';
 import '../view_models/benchmark_view_model.dart';
+import '../view_models/probe_view_models.dart';
 import 'diagnostics_event.dart';
 import 'diagnostics_state.dart';
 
@@ -31,9 +34,11 @@ import 'diagnostics_state.dart';
 final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
   DiagnosticsBloc({
     required RunBenchmarkUseCase runBenchmark,
+    required ProbeRuntimeUseCase probeRuntime,
     required this.capabilities,
     FrameTimingRecorder? frameRecorder,
   }) : _benchmark = runBenchmark,
+       _probe = probeRuntime,
        _frames = frameRecorder ?? FrameTimingRecorder(),
        super(const DiagnosticsState()) {
     on<DiagnosticsStarted>(_onStarted);
@@ -47,9 +52,16 @@ final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
       transformer: EventTransformers.droppable(),
     );
     on<DiagnosticsCleared>(_onCleared);
+    on<DiagnosticsTestSelected>(_onTestSelected);
+    on<DiagnosticsRepeatsChanged>(_onRepeatsChanged);
   }
 
+  /// Các cỡ lô mà phép đo độ trễ huỷ quét qua — đúng ba cỡ của bảng điều khiển,
+  /// để bảng huỷ và bảng hiệu năng nói về cùng một bộ cấu hình.
+  static const List<int> cancelProbeBatchSizes = <int>[500, 2000, 8000];
+
   final RunBenchmarkUseCase _benchmark;
+  final ProbeRuntimeUseCase _probe;
   final FrameTimingRecorder _frames;
 
   final PlatformCapabilities capabilities;
@@ -100,6 +112,14 @@ final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
     Emitter<DiagnosticsState> emit,
   ) async {
     if (state.isRunning) return;
+    switch (state.test) {
+      case DiagnosticsTest.cancellation:
+        return _runCancellation(emit);
+      case DiagnosticsTest.backpressure:
+        return _runBackpressure(emit);
+      case DiagnosticsTest.throughput:
+        break;
+    }
 
     final strategies = state.workload.strategiesFor(
       capabilities: capabilities,
@@ -118,7 +138,9 @@ final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
     final results = <BenchmarkRunViewModel>[];
     for (var index = 0; index < strategies.length; index++) {
       emit(state.copyWith(runningStrategyIndex: index));
-      final measured = await _measure(strategies[index]);
+      final measured = state.repeats <= 1
+          ? await _measure(strategies[index])
+          : await _measureRepeated(strategies[index], state.repeats);
       switch (measured) {
         case Err<BenchmarkRunViewModel>(:final failure):
           emit(
@@ -152,9 +174,171 @@ final class DiagnosticsBloc extends Bloc<DiagnosticsEvent, DiagnosticsState> {
     emit(
       state.copyWith(
         runs: const <BenchmarkRunViewModel>[],
+        cancelRuns: const <CancelProbeViewModel>[],
+        backpressureRuns: const <BackpressureProbeViewModel>[],
         runningStrategyIndex: 0,
         strategyCount: 0,
         clearError: true,
+      ),
+    );
+  }
+
+  void _onTestSelected(
+    DiagnosticsTestSelected event,
+    Emitter<DiagnosticsState> emit,
+  ) {
+    if (state.isRunning) return;
+    emit(state.copyWith(test: event.test, clearError: true));
+  }
+
+  void _onRepeatsChanged(
+    DiagnosticsRepeatsChanged event,
+    Emitter<DiagnosticsState> emit,
+  ) {
+    if (state.isRunning || event.repeats < 1) return;
+    emit(state.copyWith(repeats: event.repeats));
+  }
+
+  /// Đo cùng một cấu hình [repeats] lần, mỗi lần một bộ ghi khung hình riêng,
+  /// rồi gộp về lần đo trung vị.
+  ///
+  /// Không đi qua [_measure] để giữ nguyên nó đúng như cũ: lượt đo một lần của
+  /// bảng hiệu năng vẫn chạy đúng con đường đã được kiểm chứng.
+  Future<Result<BenchmarkRunViewModel>> _measureRepeated(
+    ConcurrencyStrategy strategy,
+    int repeats,
+  ) async {
+    final measured = <(BenchmarkRun, FrameTimingStats)>[];
+    for (var i = 0; i < repeats; i++) {
+      _frames.start();
+      final result = await _benchmark.execute(
+        RunBenchmarkRequest(
+          sampleSize: state.sampleSize,
+          strategies: <ConcurrencyStrategy>[strategy],
+        ),
+      );
+      final frames = _frames.stop();
+      switch (result) {
+        case Err<RunBenchmarkResult>(:final failure):
+          return Err<BenchmarkRunViewModel>(failure);
+        case Ok<RunBenchmarkResult>(:final value):
+          measured.add((value.runs.first, frames));
+      }
+    }
+    return Ok<BenchmarkRunViewModel>(BenchmarkRunViewModel.medianOf(measured));
+  }
+
+  /// Độ trễ huỷ: mỗi cỡ lô × mỗi chế độ chạy có thật trên nền tảng này.
+  ///
+  /// Chỉ luồng chính và **một** isolate: huỷ là chuyện của một workload, và
+  /// "nhiều isolate song song" chỉ khác ở số workload chạy cùng lúc chứ không
+  /// khác ở cách một workload nhìn thấy lệnh huỷ.
+  Future<void> _runCancellation(Emitter<DiagnosticsState> emit) async {
+    final strategies = <ConcurrencyStrategy>[
+      for (final size in cancelProbeBatchSizes) ...<ConcurrencyStrategy>[
+        ConcurrencyStrategy.mainThread(batchSize: size),
+        if (capabilities.supportsIsolates)
+          ConcurrencyStrategy.singleIsolate(batchSize: size),
+      ],
+    ];
+    emit(
+      state.copyWith(
+        isRunning: true,
+        runningStrategyIndex: 0,
+        strategyCount: strategies.length,
+        cancelRuns: const <CancelProbeViewModel>[],
+        clearError: true,
+      ),
+    );
+
+    final results = <CancelProbeViewModel>[];
+    for (var index = 0; index < strategies.length; index++) {
+      emit(state.copyWith(runningStrategyIndex: index));
+      final measured = await _probe.measureCancellation(
+        sampleSize: state.sampleSize,
+        strategy: strategies[index],
+      );
+      switch (measured) {
+        case Err<CancelProbeRun>(:final failure):
+          emit(
+            state.copyWith(
+              isRunning: false,
+              cancelRuns: results,
+              error: FailurePresenter.of(failure, context: 'cancel probe'),
+            ),
+          );
+          return;
+        case Ok<CancelProbeRun>(:final value):
+          results.add(CancelProbeViewModel.of(value));
+          emit(state.copyWith(cancelRuns: <CancelProbeViewModel>[...results]));
+      }
+    }
+    emit(
+      state.copyWith(
+        isRunning: false,
+        runningStrategyIndex: strategies.length,
+        cancelRuns: results,
+      ),
+    );
+  }
+
+  /// Hàng đợi chờ ghi ở cỡ lô đang chọn: isolate có giới hạn, isolate bỏ giới
+  /// hạn, và luồng chính — ba dòng đủ để thấy giới hạn giữ được gì, và vì sao
+  /// trên Web nó không còn gì để giữ (UC-14).
+  Future<void> _runBackpressure(Emitter<DiagnosticsState> emit) async {
+    final isolate = ConcurrencyStrategy.singleIsolate(
+      batchSize: state.batchSize,
+    );
+    final configs = <(ConcurrencyStrategy, bool)>[
+      if (capabilities.supportsIsolates) ...<(ConcurrencyStrategy, bool)>[
+        (isolate, true),
+        (isolate, false),
+      ],
+      (ConcurrencyStrategy.mainThread(batchSize: state.batchSize), true),
+    ];
+    emit(
+      state.copyWith(
+        isRunning: true,
+        runningStrategyIndex: 0,
+        strategyCount: configs.length,
+        backpressureRuns: const <BackpressureProbeViewModel>[],
+        clearError: true,
+      ),
+    );
+
+    final results = <BackpressureProbeViewModel>[];
+    for (var index = 0; index < configs.length; index++) {
+      emit(state.copyWith(runningStrategyIndex: index));
+      final (strategy, capped) = configs[index];
+      final measured = await _probe.measureBackpressure(
+        sampleSize: state.sampleSize,
+        strategy: strategy,
+        capped: capped,
+      );
+      switch (measured) {
+        case Err<BackpressureProbeRun>(:final failure):
+          emit(
+            state.copyWith(
+              isRunning: false,
+              backpressureRuns: results,
+              error: FailurePresenter.of(failure, context: 'backlog probe'),
+            ),
+          );
+          return;
+        case Ok<BackpressureProbeRun>(:final value):
+          results.add(BackpressureProbeViewModel.of(value));
+          emit(
+            state.copyWith(
+              backpressureRuns: <BackpressureProbeViewModel>[...results],
+            ),
+          );
+      }
+    }
+    emit(
+      state.copyWith(
+        isRunning: false,
+        runningStrategyIndex: configs.length,
+        backpressureRuns: results,
       ),
     );
   }

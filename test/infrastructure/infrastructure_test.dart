@@ -142,6 +142,41 @@ void main() {
   });
 
   group('transaction repository', () {
+    test('filters by several accounts at once (account_id IN …)', () async {
+      final ids = <int>[];
+      for (final name in <String>['A', 'B', 'C']) {
+        final account = await accounts.add(
+          BankAccount.create(displayName: name, createdAt: now),
+        );
+        final record = await seedRecord(account.accountId!);
+        await transactions.addAll(<Transaction>[
+          tx(
+            accountId: account.accountId!,
+            recordId: record,
+            date: DateTime.utc(2025, 1, 10),
+            amount: 1000,
+            description: 'row of $name',
+          ),
+        ]);
+        ids.add(account.accountId!);
+      }
+
+      expect(
+        await transactions.count(TransactionFilter(accountIds: ids.take(2))),
+        2,
+      );
+      expect(
+        await transactions.count(TransactionFilter(accountIds: <int>[ids[2]])),
+        1,
+      );
+      final page = await transactions.findPage(
+        filter: TransactionFilter(accountIds: <int>[ids[0], ids[2]]),
+        limit: 10,
+        offset: 0,
+      );
+      expect(page.map((row) => row.accountId).toSet(), <int>{ids[0], ids[2]});
+    });
+
     test('paging, filtering and dedup counting', () async {
       final a = await accounts.add(
         BankAccount.create(displayName: 'A', createdAt: now),

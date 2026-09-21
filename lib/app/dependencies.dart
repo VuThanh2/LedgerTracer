@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../application/accounts/manage_accounts/manage_accounts_use_case.dart';
+import '../application/diagnostics/probe_runtime/probe_runtime_use_case.dart';
 import '../application/diagnostics/run_benchmark/run_benchmark_use_case.dart';
 import '../application/export/export_dataset/export_dataset_use_case.dart';
 import '../application/import/import_statements/import_statements_use_case.dart';
@@ -69,6 +70,7 @@ final class AppDependencies {
     required this.resetApp,
     required this.backupRestore,
     required this.runBenchmark,
+    required this.probeRuntime,
     required this.statementFilePicker,
     required this.backupFilePicker,
   });
@@ -193,6 +195,7 @@ final class AppDependencies {
         now: now,
       ),
       runBenchmark: RunBenchmarkUseCase(runner: runner),
+      probeRuntime: ProbeRuntimeUseCase(runner: runner),
       statementFilePicker: const _PickerStatementAdapter(filePicker),
       backupFilePicker: const _PickerBackupAdapter(filePicker),
     );
@@ -227,6 +230,7 @@ final class AppDependencies {
   final BackupRestoreUseCase backupRestore;
 
   final RunBenchmarkUseCase runBenchmark;
+  final ProbeRuntimeUseCase probeRuntime;
 
   final StatementFilePicker statementFilePicker;
   final BackupFilePicker backupFilePicker;

@@ -10,6 +10,8 @@ import '../shared/widgets/frame_pulse.dart';
 import 'bloc/diagnostics_bloc.dart';
 import 'bloc/diagnostics_event.dart';
 import 'bloc/diagnostics_state.dart';
+import 'view_models/probe_view_models.dart';
+import 'widgets/probe_result_tables.dart';
 import 'widgets/strategy_result_table.dart';
 import 'widgets/workload_controls.dart';
 
@@ -35,6 +37,7 @@ class DiagnosticsPage extends StatelessWidget {
     return BlocProvider<DiagnosticsBloc>(
       create: (_) => DiagnosticsBloc(
         runBenchmark: dependencies.runBenchmark,
+        probeRuntime: dependencies.probeRuntime,
         capabilities: dependencies.capabilities,
       )..add(const DiagnosticsStarted()),
       child: Theme(
@@ -83,6 +86,15 @@ class _DiagnosticsView extends StatelessWidget {
                 onSampleSizeSelected: (size) =>
                     bloc.add(DiagnosticsSampleSizeChanged(size)),
                 onRun: () => bloc.add(const DiagnosticsRunRequested()),
+                onTestSelected: (test) =>
+                    bloc.add(DiagnosticsTestSelected(test)),
+                onRepeatsSelected: (count) =>
+                    bloc.add(DiagnosticsRepeatsChanged(count)),
+              ),
+              const SizedBox(height: Gap.md),
+              Text(
+                state.test.explanation,
+                style: LedgerText.bodySm.copyWith(color: colors.darkInkMute),
               ),
               const SizedBox(height: Gap.lg),
 
@@ -106,7 +118,17 @@ class _DiagnosticsView extends StatelessWidget {
               ),
               const SizedBox(height: Gap.md),
 
-              StrategyResultTable(runs: state.runs),
+              switch (state.test) {
+                DiagnosticsTest.throughput => StrategyResultTable(
+                  runs: state.runs,
+                ),
+                DiagnosticsTest.cancellation => CancelProbeTable(
+                  runs: state.cancelRuns,
+                ),
+                DiagnosticsTest.backpressure => BackpressureProbeTable(
+                  runs: state.backpressureRuns,
+                ),
+              },
               const SizedBox(height: Gap.xxl),
             ],
           );

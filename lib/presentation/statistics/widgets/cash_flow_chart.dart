@@ -422,12 +422,13 @@ class _HorizontalBars extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.ledger;
     final max = chart.maxMagnitude == 0 ? 1 : chart.maxMagnitude;
-    // Đứng cạnh biểu đồ cột (bản rộng), thanh 8px trông như đường kẻ đặt
-    // cạnh những cột 48px — hai card không cùng "trọng lượng". Ở đó thanh dày
-    // lên và các tài khoản giãn ra; xếp chồng (mobile) thì giữ mảnh để một
-    // màn hình chứa được nhiều tài khoản.
-    final thickness = fill ? 20.0 : 8.0;
-    final rowGap = fill ? Gap.xl : Gap.lg;
+    // Thanh dày 20px ở **mọi** bề rộng. Bản đầu giữ thanh 8px khi xếp chồng
+    // để một màn hẹp chứa được nhiều tài khoản, nhưng trên điện thoại thật
+    // thanh 8px đọc như đường kẻ chứ không như biểu đồ, và số tài khoản thường
+    // chỉ vài cái nên chỗ tiết kiệm được không đáng. [fill] giờ chỉ còn lo việc
+    // căn giữa cụm thanh trong card bị kéo cao.
+    const thickness = 20.0;
+    const rowGap = Gap.xl;
 
     final rows = <Widget>[
       for (final (index, bar) in chart.bars.indexed)
@@ -465,13 +466,13 @@ class _HorizontalBars extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: fill ? Gap.sm : 6),
+                  const SizedBox(height: Gap.sm),
                   _HorizontalBar(
                     fraction: bar.inflowMinorUnits.abs() / max,
                     color: colors.moneyIn,
                     thickness: thickness,
                   ),
-                  SizedBox(height: fill ? 6 : Gap.xs),
+                  const SizedBox(height: 6),
                   _HorizontalBar(
                     fraction: bar.outflowMinorUnits.abs() / max,
                     color: colors.moneyOutGraphic,

@@ -180,7 +180,7 @@ final class CashFlowDrillDown {
       excludeInternalTransfers: excludeInternalTransfers,
     ),
     draft: TransactionFilterDraft(
-      accountId: accountId,
+      accountIds: <int>{?accountId},
       dateFrom: dateRange?.from,
       dateTo: dateRange?.to,
       currency: currency,

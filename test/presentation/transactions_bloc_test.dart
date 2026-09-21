@@ -299,18 +299,88 @@ void main() {
       bloc
         ..add(
           TransactionsFilterDraftChanged(
-            TransactionFilterDraft(accountId: accountB),
+            TransactionFilterDraft(accountIds: <int>{accountB}),
           ),
         )
         ..add(const TransactionsFilterApplied());
       final state = await bloc.stream.firstWhere(
-        (state) => state.status.isReady && state.filter.accountId == accountB,
+        (state) =>
+            state.status.isReady && state.filter.accountIds.contains(accountB),
       );
 
       expect(state.rows, hasLength(1));
       expect(
         state.chips.map((chip) => chip.kind),
         contains(FilterChipKind.account),
+      );
+    });
+
+    test(
+      'đọc lại thì thấy tài khoản và loại tiền mới tạo sau khi mở',
+      () async {
+        await tx(account: accountA, record: recordA1, day: 1);
+        bloc = build();
+        bloc.add(const TransactionsStarted());
+        final opened = await ready();
+        expect(opened.accountNames.values, isNot(contains('Tài khoản mới')));
+
+        // Tạo tài khoản ở Cài đặt, nhập một file USD — cả hai sau khi màn hình
+        // đã mở. Trước đây chỉ `Started` đọc hai bảng tra này.
+        final created = await seed.account('Tài khoản mới');
+        final record = await seed.fileRecord(
+          accountId: created,
+          name: 'usd.csv',
+        );
+        await tx(account: created, record: record, currency: Currency.usd);
+
+        bloc.add(const TransactionsRefreshed());
+        final refreshed = await bloc.stream.firstWhere(
+          (state) =>
+              state.status.isReady && state.accountNames.containsKey(created),
+        );
+        expect(refreshed.accountNames[created], 'Tài khoản mới');
+        expect(
+          refreshed.currencies.map((usage) => usage.currency),
+          contains(Currency.usd),
+        );
+      },
+    );
+
+    test('tài khoản đang lọc bị xoá thì tiêu chí đó rơi khỏi bộ lọc', () async {
+      await tx(account: accountA, record: recordA1, day: 1);
+      await tx(account: accountB, record: recordB, day: 2);
+      bloc = build();
+      bloc.add(const TransactionsStarted());
+      await ready();
+      bloc
+        ..add(
+          TransactionsFilterDraftChanged(
+            TransactionFilterDraft(
+              accountIds: <int>{accountB},
+              currency: Currency.vnd,
+            ),
+          ),
+        )
+        ..add(const TransactionsFilterApplied());
+      await bloc.stream.firstWhere(
+        (state) =>
+            state.status.isReady && state.filter.accountIds.contains(accountB),
+      );
+
+      await db.transactions.deleteByAccountId(accountB);
+      await db.accounts.deleteById(accountB);
+      bloc.add(const TransactionsRefreshed());
+      final state = await bloc.stream.firstWhere(
+        (state) =>
+            state.status.isReady && !state.accountNames.containsKey(accountB),
+      );
+
+      expect(state.draft.accountIds, isEmpty);
+      expect(state.filter.accountIds, isEmpty);
+      expect(state.rows, hasLength(1));
+      expect(
+        state.chips.map((chip) => chip.kind),
+        isNot(contains(FilterChipKind.account)),
       );
     });
   });

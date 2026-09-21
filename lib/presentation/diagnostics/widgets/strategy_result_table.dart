@@ -86,7 +86,14 @@ class _RunCard extends StatelessWidget {
             spacing: Gap.xl,
             runSpacing: Gap.md,
             children: <Widget>[
-              _Metric(value: run.elapsedText, label: 'total time'),
+              _Metric(
+                value: run.elapsedText,
+                label: run.repeatCount > 1
+                    ? 'median of ${run.repeatCount}'
+                    : 'total time',
+              ),
+              if (run.rangeText case final String range)
+                _Metric(value: range, label: 'fastest – slowest'),
               _Metric(value: run.throughputText, label: 'throughput'),
               _Metric(value: run.batchCountText, label: 'batches'),
               _Metric(value: run.itemsProcessedText, label: 'items'),

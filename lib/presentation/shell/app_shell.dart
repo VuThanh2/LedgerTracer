@@ -73,6 +73,11 @@ class _AppShellState extends State<AppShell> {
   void _ensureStarted(NavDestination destination) {
     if (_started.contains(destination)) return;
     setState(() => _started.add(destination));
+    _load(destination);
+  }
+
+  /// Phát sự kiện nạp lần đầu cho BLoC của [destination].
+  void _load(NavDestination destination) {
     switch (destination) {
       case NavDestination.transactions:
         context.read<TransactionsBloc>().add(const TransactionsStarted());
@@ -233,11 +238,41 @@ class _AppShellState extends State<AppShell> {
 
   void _select(NavDestination destination) {
     final wasStarted = _started.contains(destination);
-    _ensureStarted(destination);
-    // Đã mở trước đó thì `_ensureStarted` không làm gì, và trang giữ nguyên ảnh
-    // chụp cũ của nó — xem [_refresh].
-    if (wasStarted) _refresh(destination);
+    final compact = WindowSizeClass.of(
+      MediaQuery.sizeOf(context).width,
+    ).usesBottomNavigation;
+    if (!compact) {
+      _ensureStarted(destination);
+      // Đã mở trước đó thì `_ensureStarted` không làm gì, và trang giữ nguyên
+      // ảnh chụp cũ của nó — xem [_refresh].
+      if (wasStarted) _refresh(destination);
+      context.read<AppShellBloc>().add(
+        AppShellDestinationSelected(destination),
+      );
+      return;
+    }
+
+    // Bản hẹp có chuyển cảnh [TabTransition]: trang được **dựng** ngay để có
+    // thứ trượt vào, nhưng việc đọc cơ sở dữ liệu và dựng lại trang theo dữ
+    // liệu mới được hoãn tới khi chuyển cảnh xong. Làm cả hai cùng lúc là
+    // nguyên nhân chính của những lần đổi tab bị khựng: truy vấn chiếm luồng
+    // và một lượt dựng lại cả trang rơi đúng vào giữa 320ms trượt.
+    if (!wasStarted) setState(() => _started.add(destination));
     context.read<AppShellBloc>().add(AppShellDestinationSelected(destination));
+    Future<void>.delayed(TabTransition.duration, () {
+      if (!mounted) return;
+      if (!wasStarted) {
+        // Nạp lần đầu luôn phải chạy, kể cả khi người dùng đã bấm sang tab
+        // khác: bỏ nó thì trang đứng ở trạng thái chờ mãi, vì lần chọn sau
+        // chỉ còn là "đọc lại".
+        _load(destination);
+      } else if (context.read<AppShellBloc>().state.destination ==
+          destination) {
+        // Đọc lại thì chỉ khi người dùng vẫn đang ở tab này: bấm lướt qua
+        // một tab không phải lý do để đọc lại dữ liệu mà không ai xem.
+        _refresh(destination);
+      }
+    });
   }
 }
 
@@ -354,17 +389,39 @@ class _BackgroundWorkIndicator extends StatelessWidget {
   }
 }
 
-/// Mở Cài đặt, rồi báo tab Nhập đọc lại danh sách tài khoản khi quay về.
+/// Mở Cài đặt, rồi báo các tab đọc lại dữ liệu khi quay về.
 ///
-/// Màn Quản lý tài khoản nằm dưới Cài đặt, nên đây là lối duy nhất để tài khoản
-/// đổi mà `ImportBloc` không hay. Người dùng hay rời đi đúng lúc đang ở bước 2
-/// — thiếu tài khoản thì mới phải đi tạo — và khi quay lại, bước 2 không được
-/// "đi vào" lần nữa, nên nếu không đọc lại thì ô chọn vẫn là danh sách cũ.
+/// Cài đặt là nơi dữ liệu đổi mà không tab nào hay: Quản lý tài khoản tạo, đổi
+/// tên và xoá tài khoản (xoá kéo theo giao dịch của nó), còn khôi phục bản sao
+/// lưu thay cả cơ sở dữ liệu. Quay về từ Cài đặt không phải một lần đổi tab, nên
+/// [_AppShellState._refresh] không chạy — phải báo ở đây.
+///
+/// * Tab Nhập: người dùng hay rời đi đúng lúc đang ở bước 2 — thiếu tài khoản
+///   thì mới phải đi tạo — và khi quay lại, bước 2 không được "đi vào" lần nữa.
+/// * Tab Giao dịch: luôn đã khởi động, và Filter Panel của nó giữ danh sách tài
+///   khoản.
+/// * Tab đang nhìn (Đối soát/Thống kê): nó đang hiện ảnh chụp cũ ngay trước mắt.
+///   Tab khác sẽ tự đọc lại khi được chọn.
 ///
 /// Lấy BLoC **trước** `await`: sau khi route đóng, `context` này có thể không
 /// còn gắn vào cây.
 Future<void> _openSettings(BuildContext context) async {
   final importBloc = context.read<ImportBloc>();
+  final transactionsBloc = context.read<TransactionsBloc>();
+  final shellBloc = context.read<AppShellBloc>();
+  final reconciliationBloc = context.read<ReconciliationBloc>();
+  final statisticsBloc = context.read<StatisticsBloc>();
   await Navigator.of(context).pushNamed(LedgerRoutes.settings);
   if (!importBloc.isClosed) importBloc.add(const ImportAccountsRefreshed());
+  if (!transactionsBloc.isClosed) {
+    transactionsBloc.add(const TransactionsRefreshed());
+}
+  switch (shellBloc.state.destination) {
+    case NavDestination.reconciliation when !reconciliationBloc.isClosed:
+      reconciliationBloc.add(const ReconciliationStarted());
+    case NavDestination.statistics when !statisticsBloc.isClosed:
+      statisticsBloc.add(const StatisticsStarted());
+    case _:
+      break;
+  }
 }

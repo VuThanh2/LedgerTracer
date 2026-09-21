@@ -1,4 +1,5 @@
 import '../view_models/benchmark_view_model.dart';
+import '../view_models/probe_view_models.dart';
 
 /// Những gì xảy ra trên màn hình chẩn đoán — màn hình phục vụ phần thực nghiệm,
 /// nằm ngoài Domain.
@@ -39,4 +40,18 @@ final class DiagnosticsRunRequested extends DiagnosticsEvent {
 
 final class DiagnosticsCleared extends DiagnosticsEvent {
   const DiagnosticsCleared();
+}
+
+/// Đổi phép đo: hiệu năng, độ trễ huỷ, hay hàng đợi chờ ghi.
+final class DiagnosticsTestSelected extends DiagnosticsEvent {
+  const DiagnosticsTestSelected(this.test);
+
+  final DiagnosticsTest test;
+}
+
+/// Đổi số lần đo lặp cho mỗi cấu hình của bảng hiệu năng.
+final class DiagnosticsRepeatsChanged extends DiagnosticsEvent {
+  const DiagnosticsRepeatsChanged(this.repeats);
+
+  final int repeats;
 }

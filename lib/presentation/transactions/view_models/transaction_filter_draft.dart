@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show setEquals;
+
 import '../../../domain/errors/transaction_errors.dart';
 import '../../../domain/repositories/transaction_repository.dart';
 import '../../../domain/value_objects/amount_range.dart';
@@ -22,7 +24,7 @@ import '../../shared/formatting/number_formatter.dart';
 /// [validate] là ranh giới duy nhất giữa hai thế giới.
 final class TransactionFilterDraft {
   const TransactionFilterDraft({
-    this.accountId,
+    this.accountIds = const <int>{},
     this.dateFrom,
     this.dateTo,
     this.minAmountText = '',
@@ -33,7 +35,8 @@ final class TransactionFilterDraft {
 
   static const TransactionFilterDraft empty = TransactionFilterDraft();
 
-  final int? accountId;
+  /// Các tài khoản đang tích. Rỗng là mọi tài khoản.
+  final Set<int> accountIds;
   final DateTime? dateFrom;
   final DateTime? dateTo;
 
@@ -65,7 +68,7 @@ final class TransactionFilterDraft {
       minAmountText.trim().isNotEmpty || maxAmountText.trim().isNotEmpty;
 
   bool get isEmpty =>
-      accountId == null &&
+      accountIds.isEmpty &&
       dateFrom == null &&
       dateTo == null &&
       !hasAmountCriteria &&
@@ -75,7 +78,7 @@ final class TransactionFilterDraft {
   /// các cờ `clear*`. Không có cách nào khác phân biệt "không đụng tới" với "đặt
   /// về rỗng" khi mọi trường đều nullable.
   TransactionFilterDraft copyWith({
-    int? accountId,
+    Set<int>? accountIds,
     bool clearAccount = false,
     DateTime? dateFrom,
     DateTime? dateTo,
@@ -86,7 +89,7 @@ final class TransactionFilterDraft {
     bool? filterByCurrency,
     bool clearAmount = false,
   }) => TransactionFilterDraft(
-    accountId: clearAccount ? null : (accountId ?? this.accountId),
+    accountIds: clearAccount ? const <int>{} : (accountIds ?? this.accountIds),
     dateFrom: clearDateRange ? null : (dateFrom ?? this.dateFrom),
     dateTo: clearDateRange ? null : (dateTo ?? this.dateTo),
     minAmountText: clearAmount ? '' : (minAmountText ?? this.minAmountText),
@@ -155,7 +158,7 @@ final class TransactionFilterDraft {
           ? null
           : TransactionFilter(
               keyword: keyword,
-              accountId: accountId,
+              accountIds: accountIds,
               dateRange: dateRange,
               amountRange: amountRange,
               // Loại tiền là tiêu chí riêng chỉ khi người dùng bật nó — xem
@@ -210,7 +213,7 @@ final class TransactionFilterDraft {
   @override
   bool operator ==(Object other) =>
       other is TransactionFilterDraft &&
-      other.accountId == accountId &&
+      setEquals(other.accountIds, accountIds) &&
       other.dateFrom == dateFrom &&
       other.dateTo == dateTo &&
       other.minAmountText == minAmountText &&
@@ -220,7 +223,7 @@ final class TransactionFilterDraft {
 
   @override
   int get hashCode => Object.hash(
-    accountId,
+    Object.hashAllUnordered(accountIds),
     dateFrom,
     dateTo,
     minAmountText,

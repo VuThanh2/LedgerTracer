@@ -1,5 +1,6 @@
 import '../../shared/failures/feedback_message.dart';
 import '../view_models/benchmark_view_model.dart';
+import '../view_models/probe_view_models.dart';
 
 /// Trạng thái màn hình chẩn đoán.
 final class DiagnosticsState {
@@ -14,6 +15,10 @@ final class DiagnosticsState {
     this.strategyCount = 0,
     this.runs = const <BenchmarkRunViewModel>[],
     this.error,
+    this.test = DiagnosticsTest.throughput,
+    this.repeats = 1,
+    this.cancelRuns = const <CancelProbeViewModel>[],
+    this.backpressureRuns = const <BackpressureProbeViewModel>[],
   });
 
   /// Đủ lớn để chênh lệch giữa các chiến lược vượt hẳn nhiễu đo, đủ nhỏ để một
@@ -42,7 +47,19 @@ final class DiagnosticsState {
 
   final FeedbackMessage? error;
 
-  bool get hasResults => runs.isNotEmpty;
+  /// Phép đo đang chọn. Mỗi phép đo giữ bảng kết quả riêng, nên đổi qua lại
+  /// không xoá số đã đo của phép kia.
+  final DiagnosticsTest test;
+
+  /// Đo mỗi cấu hình của bảng hiệu năng bao nhiêu lần rồi lấy trung vị. 1 là
+  /// hành vi ban đầu: một lần đo, không gộp.
+  final int repeats;
+
+  final List<CancelProbeViewModel> cancelRuns;
+  final List<BackpressureProbeViewModel> backpressureRuns;
+
+  bool get hasResults =>
+      runs.isNotEmpty || cancelRuns.isNotEmpty || backpressureRuns.isNotEmpty;
 
   double get progress =>
       strategyCount == 0 ? 0 : runningStrategyIndex / strategyCount;
@@ -59,6 +76,10 @@ final class DiagnosticsState {
     List<BenchmarkRunViewModel>? runs,
     FeedbackMessage? error,
     bool clearError = false,
+    DiagnosticsTest? test,
+    int? repeats,
+    List<CancelProbeViewModel>? cancelRuns,
+    List<BackpressureProbeViewModel>? backpressureRuns,
   }) => DiagnosticsState(
     workload: workload ?? this.workload,
     sampleSize: sampleSize ?? this.sampleSize,
@@ -70,5 +91,9 @@ final class DiagnosticsState {
     strategyCount: strategyCount ?? this.strategyCount,
     runs: runs ?? this.runs,
     error: clearError ? null : (error ?? this.error),
+    test: test ?? this.test,
+    repeats: repeats ?? this.repeats,
+    cancelRuns: cancelRuns ?? this.cancelRuns,
+    backpressureRuns: backpressureRuns ?? this.backpressureRuns,
   );
 }

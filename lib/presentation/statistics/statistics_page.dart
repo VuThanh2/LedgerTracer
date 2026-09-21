@@ -154,12 +154,18 @@ class _Toolbar extends StatelessWidget {
     final colors = context.ledger;
     final bloc = context.read<StatisticsBloc>();
 
-    final currencies = CurrencyTabBar(
+    // Ở bản hẹp dãy tab **ôm theo nội dung** chứ không trải hết bề ngang: trường
+    // hợp phổ biến nhất là chỉ có một loại tiền, và một ô "VND" kéo dài cả màn
+    // trông như một nút bấm chứ không phải một tab. Nhiều loại tiền mà không đủ
+    // chỗ thì dãy cuộn ngang thay vì bóp nhãn thành "…".
+    final tabs = CurrencyTabBar(
       currencies: state.currencies,
       selected: state.currency,
-      expand: compact,
       onSelected: (currency) => bloc.add(StatisticsCurrencySelected(currency)),
     );
+    final currencies = compact
+        ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: tabs)
+        : tabs;
     final toggle = _ExcludeToggle(
       value: state.excludeInternalTransfers,
       onChanged: (value) => bloc.add(StatisticsInternalTransfersToggled(value)),

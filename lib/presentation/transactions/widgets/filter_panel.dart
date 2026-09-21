@@ -63,6 +63,44 @@ class _FilterPanelState extends State<FilterPanel> {
 
   TransactionFilterDraft get _draft => widget.state.draft;
 
+  /// Ô ngày đang chứa một chuỗi không đọc được thành ngày.
+  ///
+  /// Chuỗi như vậy **không** đi vào bản nháp — bản nháp chỉ giữ ngày đã hợp lệ —
+  /// nên trước đây nó bị bỏ qua trong im lặng: bản nháp giữ ngày cũ (hoặc không
+  /// có ngày), và Apply lọc theo một thứ khác hẳn thứ đang hiện trong ô. Giờ ô
+  /// báo lỗi và Apply bị khoá cho tới khi sửa xong.
+  bool _fromInvalid = false;
+  bool _toInvalid = false;
+
+  @override
+  void didUpdateWidget(FilterPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final before = oldWidget.state.draft;
+    final after = widget.state.draft;
+    // Các ô chữ được điền **một lần** lúc panel dựng lên, sau đó chúng là nguồn
+    // của chuỗi đang gõ. Nhưng bản nháp còn đổi từ bên ngoài — "Clear all", gỡ
+    // một chip, đọc lại sau khi tài khoản bị xoá — và khi đó ô phải theo. Chỉ
+    // đồng bộ trường **vừa đổi** và khác với thứ ô đang thể hiện, nên phím gõ
+    // của chính người dùng (đổi bản nháp thành đúng thứ trong ô) không bao giờ
+    // bị ghi đè và con trỏ không nhảy.
+    if (before.minAmountText != after.minAmountText &&
+        _minAmount.text != after.minAmountText) {
+      _minAmount.text = after.minAmountText;
+    }
+    if (before.maxAmountText != after.maxAmountText &&
+        _maxAmount.text != after.maxAmountText) {
+      _maxAmount.text = after.maxAmountText;
+    }
+    if (before.dateFrom != after.dateFrom && !_shows(_from, after.dateFrom)) {
+      _from.text = _dayTextOf(after.dateFrom);
+      _fromInvalid = false;
+    }
+    if (before.dateTo != after.dateTo && !_shows(_to, after.dateTo)) {
+      _to.text = _dayTextOf(after.dateTo);
+      _toInvalid = false;
+    }
+  }
+
   @override
   void dispose() {
     _minAmount.dispose();
@@ -74,14 +112,25 @@ class _FilterPanelState extends State<FilterPanel> {
 
   void _emit(TransactionFilterDraft draft) => widget.onDraftChanged(draft);
 
+  /// Ô ngày đang thể hiện đúng [date] chưa. Bản nháp không có ngày thì chỉ ô
+  /// trống mới khớp — một chuỗi gõ dở cũng đọc ra `null`, nhưng nó không phải
+  /// "không có ngày".
+  static bool _shows(TextEditingController field, DateTime? date) =>
+      date == null
+      ? field.text.trim().isEmpty
+      : DateFormatter.tryParseDay(field.text) == date;
+
   void _onDateChanged({required bool isFrom, required String raw}) {
     final trimmed = raw.trim();
+    final invalid =
+        trimmed.isNotEmpty && DateFormatter.tryParseDay(trimmed) == null;
+    setState(() => isFrom ? _fromInvalid = invalid : _toInvalid = invalid);
     // Chuỗi rỗng là "bỏ mốc này", nên nó phải đi qua cờ `clearDateRange` — truyền
     // `null` vào `copyWith` chỉ có nghĩa "giữ nguyên".
     if (trimmed.isEmpty) {
       _emit(
         TransactionFilterDraft(
-          accountId: _draft.accountId,
+          accountIds: _draft.accountIds,
           dateFrom: isFrom ? null : _draft.dateFrom,
           dateTo: isFrom ? _draft.dateTo : null,
           minAmountText: _draft.minAmountText,
@@ -193,6 +242,7 @@ class _FilterPanelState extends State<FilterPanel> {
                     child: _DateField(
                       controller: _from,
                       hint: 'From',
+                      invalid: _fromInvalid,
                       onChanged: (value) =>
                           _onDateChanged(isFrom: true, raw: value),
                     ),
@@ -202,6 +252,7 @@ class _FilterPanelState extends State<FilterPanel> {
                     child: _DateField(
                       controller: _to,
                       hint: 'To',
+                      invalid: _toInvalid,
                       onChanged: (value) =>
                           _onDateChanged(isFrom: false, raw: value),
                     ),
@@ -217,12 +268,8 @@ class _FilterPanelState extends State<FilterPanel> {
               const SectionLabel('Accounts'),
               _AccountPicker(
                 accountNames: widget.state.accountNames,
-                selectedId: _draft.accountId,
-                onSelected: (accountId) => _emit(
-                  accountId == null
-                      ? _draft.copyWith(clearAccount: true)
-                      : _draft.copyWith(accountId: accountId),
-                ),
+                selectedIds: _draft.accountIds,
+                onChanged: (ids) => _emit(_draft.copyWith(accountIds: ids)),
               ),
               const SizedBox(height: Gap.xl),
             ],
@@ -244,7 +291,7 @@ class _FilterPanelState extends State<FilterPanel> {
               ),
               const Spacer(),
               FilledButton(
-                onPressed: widget.onApply,
+                onPressed: _fromInvalid || _toInvalid ? null : widget.onApply,
                 child: const Text('Apply'),
               ),
             ],
@@ -283,11 +330,13 @@ class _DateField extends StatelessWidget {
     required this.controller,
     required this.hint,
     required this.onChanged,
+    this.invalid = false,
   });
 
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String> onChanged;
+  final bool invalid;
 
   @override
   Widget build(BuildContext context) => TextField(
@@ -295,7 +344,12 @@ class _DateField extends StatelessWidget {
     onChanged: onChanged,
     keyboardType: TextInputType.datetime,
     style: LedgerText.bodyMd.copyWith(color: context.ledger.ink),
-    decoration: InputDecoration(hintText: hint, helperText: 'dd/mm/yyyy'),
+    // Lỗi thay chỗ dòng gợi ý chứ không thêm một dòng, nên ô không cao lên.
+    decoration: InputDecoration(
+      hintText: hint,
+      helperText: 'dd/mm/yyyy',
+      errorText: invalid ? 'Use dd/mm/yyyy' : null,
+    ),
   );
 }
 
@@ -345,23 +399,31 @@ class _CurrencyChips extends StatelessWidget {
   }
 }
 
-/// Chọn **một** tài khoản.
+/// Chọn **một hoặc nhiều** tài khoản bằng ô tích, đúng như bản thiết kế.
 ///
-/// Bản thiết kế vẽ dãy ô tích, nhưng `TransactionFilter` của tầng dưới chỉ mang
-/// một `accountId`. Vẽ ô tích cho một tiêu chí đơn trị là hứa với người dùng một
-/// khả năng không có: họ sẽ tích hai ô rồi thấy một ô tự bỏ. Ở đây dùng dạng
-/// chọn một, và bổ sung một dòng "Tất cả tài khoản" để bỏ chọn — hình thức khác,
-/// nhưng đúng thứ hệ thống làm được.
+/// Không tích ô nào là mọi tài khoản — và dòng "All accounts" nói ra điều đó
+/// bằng chính dấu tích của nó, để trạng thái "không lọc" không phải là một
+/// trạng thái vô hình. Bấm nó là bỏ hết các ô đã tích.
+///
+/// Tích đủ mọi tài khoản cũng là mọi tài khoản, nên nó được thu về tập rỗng:
+/// một tiêu chí liệt kê đủ mọi thứ chỉ sinh ra một chip nói "5 accounts" cho
+/// một danh sách không hề bị thu hẹp.
 class _AccountPicker extends StatelessWidget {
   const _AccountPicker({
     required this.accountNames,
-    required this.selectedId,
-    required this.onSelected,
+    required this.selectedIds,
+    required this.onChanged,
   });
 
   final Map<int, String> accountNames;
-  final int? selectedId;
-  final ValueChanged<int?> onSelected;
+  final Set<int> selectedIds;
+  final ValueChanged<Set<int>> onChanged;
+
+  void _toggle(int id) {
+    final next = <int>{...selectedIds};
+    if (!next.remove(id)) next.add(id);
+    onChanged(next.length == accountNames.length ? const <int>{} : next);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -378,15 +440,15 @@ class _AccountPicker extends StatelessWidget {
       children: <Widget>[
         _AccountRow(
           label: 'All accounts',
-          selected: selectedId == null,
-          onTap: () => onSelected(null),
+          selected: selectedIds.isEmpty,
+          onTap: () => onChanged(const <int>{}),
         ),
         for (final MapEntry<int, String>(key: id, value: name)
             in accountNames.entries)
           _AccountRow(
             label: name,
-            selected: selectedId == id,
-            onTap: () => onSelected(id),
+            selected: selectedIds.contains(id),
+            onTap: () => _toggle(id),
           ),
       ],
     );
@@ -416,8 +478,8 @@ class _AccountRow extends StatelessWidget {
         child: Row(
           children: <Widget>[
             Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              size: 16,
+              selected ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 18,
               color: selected ? colors.primary : colors.hairlineControl,
             ),
             const SizedBox(width: Gap.md),

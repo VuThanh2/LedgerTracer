@@ -374,6 +374,23 @@ void main() {
     expect(tester.getSize(tile.first).height, lessThanOrEqualTo(60));
   });
 
+  testWidgets('bản hẹp: tab mới chỉ nạp dữ liệu sau khi chuyển cảnh xong', (
+    tester,
+  ) async {
+    await pumpAt(tester, const Size(400, 800));
+
+    await tester.tap(find.text('STATISTICS'));
+    // Giữa chuyển cảnh: trang đã được dựng để trượt vào, nhưng chưa đọc cơ sở
+    // dữ liệu — đọc rồi dựng lại cả trang lúc này là thứ làm animation khựng.
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('MONEY IN'), findsNothing);
+
+    // Chuyển cảnh xong thì dữ liệu mới được nạp.
+    await tester.pumpAndSettle();
+    expect(find.text('MONEY IN'), findsOneWidget);
+  });
+
   testWidgets('tab Nhập dựng stepper và khoá nút đi tiếp khi chưa có file', (
     tester,
   ) async {

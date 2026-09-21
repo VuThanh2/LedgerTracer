@@ -31,11 +31,25 @@ class NoticeOverlay extends StatefulWidget {
 
   final Widget child;
 
-  /// Số thẻ hiện cùng lúc.
-  static const int maxVisible = 3;
+  /// Số thẻ hiện cùng lúc ở bản rộng, nơi chồng thẻ nằm nép ở góc phải.
+  static const int maxVisible = 2;
+
+  /// Bản hẹp chỉ giữ **một** thẻ: ở đó thẻ trải hết bề ngang ngay dưới app bar,
+  /// và hai ba thẻ chồng lên nhau là che mất thanh công cụ lẫn dòng đầu danh
+  /// sách — đúng chỗ người dùng đang bấm tiếp trong một chuỗi thao tác nhanh
+  /// (xác nhận/từ chối liên tục ở Đối soát). Thẻ mới nhất là kết quả của cú bấm
+  /// mới nhất, nên nó là thẻ đáng giữ.
+  static const int maxVisibleCompact = 1;
 
   /// Thời gian một thẻ tự ở lại trước khi biến mất.
-  static const Duration visibleFor = Duration(seconds: 4);
+  ///
+  /// Ba giây đủ đọc một câu ngắn; bốn giây trước đây làm các thẻ của một chuỗi
+  /// bấm nhanh dồn lại thành một chồng.
+  static const Duration visibleFor = Duration(seconds: 3);
+
+  /// Thẻ mang hành động (ví dụ Hoàn tác) ở lại lâu hơn: đọc một câu thì nhanh,
+  /// quyết định có hoàn tác hay không thì không.
+  static const Duration visibleWithActionFor = Duration(seconds: 5);
 
   /// Bề ngang tối đa của một thẻ ở bản rộng.
   static const double maxWidth = 380;
@@ -65,7 +79,11 @@ void showNotice(
       message,
       actionLabel: actionLabel,
       onAction: onAction,
-      visibleFor: visibleFor ?? NoticeOverlay.visibleFor,
+      visibleFor:
+          visibleFor ??
+          (actionLabel != null && onAction != null
+              ? NoticeOverlay.visibleWithActionFor
+              : NoticeOverlay.visibleFor),
     ),
   );
 }
@@ -74,9 +92,23 @@ class _NoticeOverlayState extends State<NoticeOverlay> {
   final List<_Notice> _notices = <_Notice>[];
 
   void push(_Notice notice) {
+    final compact = WindowSizeClass.of(MediaQuery.sizeOf(context).width)
+        .usesBottomNavigation;
+    final limit = compact
+        ? NoticeOverlay.maxVisibleCompact
+        : NoticeOverlay.maxVisible;
     setState(() {
-      _notices.add(notice);
-      while (_notices.length > NoticeOverlay.maxVisible) {
+      // Cùng một câu đang hiện thì thay nó chứ không xếp thêm một bản sao: năm
+      // lần "Pair confirmed." liên tiếp là một thông tin, không phải năm.
+      for (final same in _notices.where(
+        (shown) => shown.message.text == notice.message.text,
+      )) {
+        same.timer.cancel();
+      }
+      _notices
+        ..removeWhere((shown) => shown.message.text == notice.message.text)
+        ..add(notice);
+      while (_notices.length > limit) {
         _notices.removeAt(0).timer.cancel();
       }
     });

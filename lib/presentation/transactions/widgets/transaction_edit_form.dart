@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/formatting/amount_input_formatter.dart';
 import '../../shared/formatting/date_formatter.dart';
 import '../../shared/widgets/banner_message.dart';
 import '../../shared/widgets/section_card.dart';
@@ -140,7 +142,14 @@ class _TransactionEditFormState extends State<TransactionEditForm> {
         SectionLabel('Amount (${draft.currency.code})'),
         TextField(
           controller: _amount,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          // Loại tiền không có phần thập phân (VND) thì bàn phím không có phím
+          // dấu chấm: một phím bấm vào không làm gì là một phím thừa.
+          keyboardType: TextInputType.numberWithOptions(
+            decimal: draft.currency.decimalDigits > 0,
+          ),
+          inputFormatters: <TextInputFormatter>[
+            AmountInputFormatter(decimalDigits: draft.currency.decimalDigits),
+          ],
           style: LedgerText.bodyTabular.copyWith(color: colors.ink),
           decoration: InputDecoration(errorText: state.validation?.amountError),
           onChanged: widget.onAmountChanged,

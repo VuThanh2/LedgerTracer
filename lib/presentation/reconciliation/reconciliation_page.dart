@@ -104,9 +104,6 @@ class _ReconciliationPageState extends State<ReconciliationPage> {
               : () => context.read<ReconciliationBloc>().add(
                   ReconciliationRejectionUndone(undoable),
                 ),
-          // Đọc một câu thì bốn giây là đủ; quyết định có hoàn tác hay không
-          // thì không.
-          visibleFor: undoable == null ? null : const Duration(seconds: 8),
         );
       },
       builder: (context, state) {

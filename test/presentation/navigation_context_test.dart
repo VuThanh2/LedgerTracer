@@ -157,7 +157,7 @@ void main() {
         ),
       );
 
-      expect(intent!.draft.accountId, 7);
+        expect(intent!.draft.accountIds, <int>{7});
       expect(intent.draft.dateFrom, range.from);
       expect(intent.draft.dateTo, range.to);
     });
@@ -184,8 +184,8 @@ void main() {
         recordId: 4,
         fileName: 'thang-01.csv',
       );
-      final narrowed = context.narrow(TransactionFilter(accountId: 3));
-      expect(narrowed.accountId, 3);
+      final narrowed = context.narrow(TransactionFilter(accountIds: <int>[3]));
+      expect(narrowed.accountIds, <int>{3});
       expect(narrowed.importFileRecordId, 4);
     });
 
