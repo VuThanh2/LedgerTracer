@@ -328,7 +328,7 @@ void main() {
       await tx(account: accountB, record: recordB, amount: 100);
       final page = await queryTransactions.execute(
         QueryTransactionsRequest(
-          filter: TransactionFilter(accountId: accountB),
+          filter: TransactionFilter(accountIds: <int>[accountB]),
           limit: 10,
           offset: 0,
         ),

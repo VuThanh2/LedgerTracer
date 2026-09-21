@@ -142,6 +142,41 @@ void main() {
   });
 
   group('transaction repository', () {
+    test('filters by several accounts at once (account_id IN …)', () async {
+      final ids = <int>[];
+      for (final name in <String>['A', 'B', 'C']) {
+        final account = await accounts.add(
+          BankAccount.create(displayName: name, createdAt: now),
+        );
+        final record = await seedRecord(account.accountId!);
+        await transactions.addAll(<Transaction>[
+          tx(
+            accountId: account.accountId!,
+            recordId: record,
+            date: DateTime.utc(2025, 1, 10),
+            amount: 1000,
+            description: 'row of $name',
+          ),
+        ]);
+        ids.add(account.accountId!);
+      }
+
+      expect(
+        await transactions.count(TransactionFilter(accountIds: ids.take(2))),
+        2,
+      );
+      expect(
+        await transactions.count(TransactionFilter(accountIds: <int>[ids[2]])),
+        1,
+      );
+      final page = await transactions.findPage(
+        filter: TransactionFilter(accountIds: <int>[ids[0], ids[2]]),
+        limit: 10,
+        offset: 0,
+      );
+      expect(page.map((row) => row.accountId).toSet(), <int>{ids[0], ids[2]});
+    });
+
     test('paging, filtering and dedup counting', () async {
       final a = await accounts.add(
         BankAccount.create(displayName: 'A', createdAt: now),
@@ -724,6 +759,49 @@ void main() {
 
       expect(parser.peekAccountNumber(file), '0011 0004 1234');
       expect(parser.estimateRowCount(file), 6);
+    });
+
+    test('reads a bilingual two-column header and drops the trailer block', () {
+      // Tiêu đề sao kê Vietcombank: hai thứ tiếng ngăn nhau bằng `/`, tiền ra và
+      // tiền vào ở hai cột riêng, và bên dưới bảng còn khối chân trang.
+      const parser = CsvParser();
+      final file = bytesOf(
+        'Ngan hang Vietcombank\n'
+        'STT/ No.;Ngay/ TNX Date;So tien ghi no/ Debit;So tien ghi co/ Credit;'
+        'So du/ Balance;Noi dung chi tiet/ Transactions in detail\n'
+        '1;01/07/2026;;45.000;24.725.300;Thu tien ban hang\n'
+        '2;02/07/2026;2.400.000;;22.325.300;Thanh toan gia vi\n'
+        'Tong so/ Total:;;;;;-175.865.293 VND\n'
+        'So du cuoi ky/ Closing balance:;;;;;-151.184.993 VND\n'
+        'Tran trong cam on quy khach da su dung dich vu Vietcombank!;;;;;\n',
+      );
+
+      final results = parser.parseLines(file).toList();
+      final rows = rowsOf(results);
+      // Cột ghi nợ phải thắng cột "số tiền" ở phép khớp tên: bí danh `so tien`
+      // cũng là tiền tố của `so tien ghi no`, và chọn nhầm nó thì cột ghi có bị
+      // bỏ hẳn — mọi dòng tiền vào thành dòng lỗi, mọi dòng tiền ra mất dấu âm.
+      expect(rows, hasLength(2));
+      expect(rows[0].amount, const Money(45000, Currency.vnd));
+      expect(rows[1].amount, const Money(-2400000, Currency.vnd));
+      expect(rows[1].description, 'Thanh toan gia vi');
+      // Ba dòng chân trang không có ngày: chúng là dòng của tờ sao kê, không
+      // phải giao dịch hỏng.
+      expect(errorsOf(results), 0);
+    });
+
+    test('a file whose date column never lines up fails as a whole file', () {
+      // Chốt chặn đi kèm việc bỏ qua dòng không có ngày: thiếu nó thì file này
+      // nhập xong với 0 dòng và 0 lỗi — một lời báo thành công cho một lần nhập
+      // không nhập được gì.
+      const parser = CsvParser();
+      final file = bytesOf(
+        'Ngay giao dich;So tien;Noi dung\n'
+        ';1.000.000;Tong so\n'
+        ';2.000.000;So du cuoi ky\n',
+      );
+
+      expect(() => parser.parseLines(file).toList(), throwsFormatException);
     });
 
     test('does not swallow prose after the account number label', () {

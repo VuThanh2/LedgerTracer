@@ -154,12 +154,12 @@ final class ImportSessionViewModel {
 
   static String _noteOf(ImportSessionStatus status) => switch (status) {
     ImportSessionStatus.cancelled =>
-      'You cancelled this run. Committed rows are kept; importing those same '
-          'files again only fills in what is missing.',
+      'You cancelled this run. Transactions saved before that are kept; '
+          'importing the same files again only adds the missing ones.',
     ImportSessionStatus.interrupted =>
-      'The app closed midway, so this run never finished. Committed rows are '
-          'kept; importing those same files again only fills in what is '
-          'missing.',
+      'The app closed before this run finished. Transactions saved before '
+          'that are kept; importing the same files again only adds the missing '
+          'ones.',
     ImportSessionStatus.inProgress || ImportSessionStatus.completed => '',
   };
 }

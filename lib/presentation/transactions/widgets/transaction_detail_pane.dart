@@ -5,6 +5,7 @@ import '../../shared/failures/feedback_message.dart';
 import '../../shared/widgets/banner_message.dart';
 import '../../shared/widgets/confirm_dialog.dart';
 import '../../shared/widgets/money_text.dart';
+import '../../shared/widgets/section_card.dart';
 import '../view_models/transaction_row_view_model.dart';
 
 /// Chi tiết một giao dịch (UC-04 b3, b4).
@@ -97,23 +98,34 @@ class TransactionDetailPane extends StatelessWidget {
               if (detail.isManuallyEdited) ...<Widget>[
                 const BannerMessage(
                   FeedbackMessage.info(
-                    'This row was edited by hand after the import, so it no '
-                    'longer matches the original file word for word.',
+                    'Edited by hand after import, so it may differ from the '
+                    'original file.',
                   ),
                 ),
                 const SizedBox(height: Gap.lg),
               ],
 
-              _FieldBox(
+              // Hai nhóm thay cho một khối năm trường: ba trường đầu là **nội
+              // dung** giao dịch, hai trường sau là **nguồn gốc** của dòng — thứ
+              // chỉ cần khi đối chiếu lại với file sao kê. Tách ra thì mắt
+              // dừng ở nhóm đầu mà không phải đọc qua hai dòng kỹ thuật.
+              const SectionLabel('Details'),
+              _FieldGroup(
                 fields: <(String, String)>[
                   ('Account', detail.accountName),
-                  ('Counterparty', _orDash(detail.counterpartyText)),
-                  ('Memo', _orDash(detail.descriptionText)),
+                  ('Counterparty', detail.counterpartyText),
+                  ('Memo', detail.descriptionText),
+                ],
+              ),
+              const SizedBox(height: Gap.xl),
+              const SectionLabel('Source'),
+              _FieldGroup(
+                fields: <(String, String)>[
                   ('Row in the source file', detail.sourceLineText),
                   ('Imported at', detail.importedAtText),
                 ],
               ),
-              const SizedBox(height: Gap.lg),
+              const SizedBox(height: Gap.xl),
 
               Row(
                 children: <Widget>[
@@ -129,11 +141,17 @@ class TransactionDetailPane extends StatelessWidget {
     );
   }
 
-  static String _orDash(String value) => value.trim().isEmpty ? '—' : value;
 }
 
-class _FieldBox extends StatelessWidget {
-  const _FieldBox({required this.fields});
+/// Một nhóm trường, mỗi trường một ô ngăn bằng đường kẻ mảnh.
+///
+/// Trước đây nhãn và giá trị chỉ cách nhau 2px, còn giữa hai trường là 12px
+/// và không có gì ngăn: mắt không biết nhãn này thuộc giá trị phía trên hay
+/// phía dưới, và năm trường đọc như một đoạn văn. Ở đây mỗi trường là một ô
+/// có ranh giới riêng, nhãn nhỏ và nhạt, giá trị lớn và đậm hơn một bậc — hai
+/// tầng chữ khác hẳn nhau nên nhìn lướt cũng tách được.
+class _FieldGroup extends StatelessWidget {
+  const _FieldGroup({required this.fields});
 
   final List<(String, String)> fields;
 
@@ -141,34 +159,59 @@ class _FieldBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.ledger;
     return Container(
-      padding: const EdgeInsets.all(Gap.lg),
       decoration: BoxDecoration(
+        color: colors.canvas,
         borderRadius: Corner.radiusMd,
         border: Border.all(color: colors.hairline),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final (index, (label, value)) in fields.indexed) ...<Widget>[
+            if (index > 0)
+              Divider(height: 1, thickness: 1, color: colors.hairline),
+            _Field(label: label, value: value),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Field extends StatelessWidget {
+  const _Field({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.ledger;
+    // Trường trống hiện "—" màu nhạt, không đậm như giá trị thật: một gạch
+    // ngang in đậm đọc như dữ liệu, trong khi nó nói rằng không có dữ liệu.
+    // View model đôi khi đã tự điền "—" (dòng nguồn không rõ), nên coi nó như
+    // trống luôn.
+    final empty = value.trim().isEmpty || value == '—';
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Gap.lg,
+        vertical: Gap.md,
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          for (final (label, value) in fields)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Gap.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    label.toUpperCase(),
-                    style: LedgerText.microCap.copyWith(
-                      color: colors.inkSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: Gap.xxs),
-                  Text(
-                    value,
-                    style: LedgerText.bodyMd.copyWith(color: colors.ink),
-                  ),
-                ],
-              ),
+          Text(
+            label.toUpperCase(),
+            style: LedgerText.microCap.copyWith(color: colors.inkSecondary),
+          ),
+          const SizedBox(height: Gap.xs),
+          SelectableText(
+            empty ? '—' : value,
+            style: LedgerText.bodyMd.copyWith(
+              color: empty ? colors.inkMute : colors.ink,
+              fontWeight: empty ? FontWeight.w400 : FontWeight.w500,
             ),
+          ),
         ],
       ),
     );

@@ -28,8 +28,8 @@ class ZeroEffectBanner extends StatelessWidget {
     ZeroEffectNotice.none => const SizedBox.shrink(),
     ZeroEffectNotice.needsMoreAccounts => BannerMessage(
       const FeedbackMessage.info(
-        'The exclude switch is on but removes nothing yet: reconciliation needs '
-        'at least two accounts holding transactions.',
+        'Excluding internal transfers has no effect yet — reconciliation needs '
+        'transactions in at least two accounts.',
       ),
       action: TextButton(
         onPressed: onGoToImport,
@@ -38,8 +38,8 @@ class ZeroEffectBanner extends StatelessWidget {
     ),
     ZeroEffectNotice.needsConfirmedPairs => BannerMessage(
       const FeedbackMessage.info(
-        'The exclude switch is on, but no pair has been confirmed yet, so '
-        'nothing is being removed from these figures.',
+        'Excluding internal transfers has no effect yet — no transfer pair '
+        'has been confirmed.',
       ),
       action: TextButton(
         onPressed: onGoToReconciliation,

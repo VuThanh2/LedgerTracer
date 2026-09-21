@@ -57,9 +57,24 @@ void main() {
     });
 
     test('lọc theo tài khoản', () {
-      final filter = TransactionFilter(accountId: 2);
+      final filter = TransactionFilter(accountIds: <int>[2]);
       expect(filter.matches(tx(accountId: 2)), isTrue);
       expect(filter.matches(tx(accountId: 3)), isFalse);
+    });
+
+    test('nhiều tài khoản là HOẶC giữa chúng', () {
+      final filter = TransactionFilter(accountIds: <int>[2, 5]);
+      expect(filter.matches(tx(accountId: 2)), isTrue);
+      expect(filter.matches(tx(accountId: 5)), isTrue);
+      expect(filter.matches(tx(accountId: 3)), isFalse);
+    });
+
+    test('tập tài khoản không sửa được từ bên ngoài', () {
+      final ids = <int>[2];
+      final filter = TransactionFilter(accountIds: ids);
+      ids.add(3);
+      expect(filter.accountIds, <int>{2});
+      expect(() => filter.accountIds.add(9), throwsUnsupportedError);
     });
 
     test('lọc theo khoảng ngày, bao gồm hai đầu mút', () {
@@ -96,7 +111,7 @@ void main() {
   group('kết hợp tiêu chí', () {
     final filter = TransactionFilter(
       keyword: SearchText.query('nguyen'),
-      accountId: 1,
+      accountIds: const <int>[1],
       dateRange: DateRange(
         from: DateTime.utc(2025, 6, 1),
         to: DateTime.utc(2025, 6, 30),

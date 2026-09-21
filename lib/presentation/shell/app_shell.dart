@@ -5,6 +5,7 @@ import '../../app/router.dart';
 import '../../app/theme.dart';
 import '../../domain/value_objects/pair_status.dart';
 import '../import/bloc/import_bloc.dart';
+import '../import/bloc/import_event.dart';
 import '../import/bloc/import_state.dart';
 import '../import/import_page.dart';
 import '../reconciliation/bloc/reconciliation_bloc.dart';
@@ -12,8 +13,6 @@ import '../reconciliation/bloc/reconciliation_event.dart';
 import '../reconciliation/bloc/reconciliation_state.dart';
 import '../reconciliation/reconciliation_page.dart';
 import '../reconciliation/view_models/reconciliation_group.dart';
-import '../shared/export/view_models/export_source.dart';
-import '../shared/export/widgets/export_dialog.dart';
 import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/frame_pulse.dart';
@@ -22,20 +21,27 @@ import '../statistics/bloc/statistics_event.dart';
 import '../statistics/statistics_page.dart';
 import '../transactions/bloc/transactions_bloc.dart';
 import '../transactions/bloc/transactions_event.dart';
-import '../transactions/bloc/transactions_state.dart';
 import '../transactions/transactions_page.dart';
+import '../transactions/widgets/export_transactions_button.dart';
 import 'bloc/app_shell_bloc.dart';
 import 'bloc/app_shell_event.dart';
 import 'bloc/app_shell_state.dart';
 import 'view_models/navigation_intent.dart';
 import 'widgets/nav_bar.dart';
 import 'widgets/nav_rail.dart';
+import 'widgets/tab_transition.dart';
 
 /// Khung điều hướng bao ngoài bốn màn hình hằng ngày.
 ///
 /// Bốn trang nằm trong một [IndexedStack] chứ không dựng lại theo tab: một lượt
 /// nhập đang chạy phải sống sót khi người dùng sang tab khác — thiết kế yêu cầu
-/// đúng điều đó, và app bar giữ một Frame Pulse thu nhỏ để họ vẫn thấy nó chạy.
+/// đúng điều đó, và một Frame Pulse thu nhỏ đi theo để họ vẫn thấy nó chạy.
+///
+/// App bar chỉ tồn tại ở bản hẹp, nơi nó là đường lùi của điều hướng. Bản rộng
+/// đã có rail mang tên màn và bánh răng Cài đặt, nên một thanh ngang nữa chỉ
+/// lặp lại thông tin đó trên suốt bề ngang màn hình; ba thứ nó từng chở được
+/// chuyển đi: nút Export sang thanh công cụ của màn Giao dịch, chỉ báo tác vụ
+/// nền xuống đầu thân trang, tiêu đề màn về rail.
 ///
 /// Điều hướng mang ngữ cảnh (`NavigationIntent`) được tiêu thụ ở đây: mọi đường
 /// đi giữa các màn đều đi qua một chỗ duy nhất, nên không màn nào phải biết cách
@@ -67,6 +73,11 @@ class _AppShellState extends State<AppShell> {
   void _ensureStarted(NavDestination destination) {
     if (_started.contains(destination)) return;
     setState(() => _started.add(destination));
+    _load(destination);
+  }
+
+  /// Phát sự kiện nạp lần đầu cho BLoC của [destination].
+  void _load(NavDestination destination) {
     switch (destination) {
       case NavDestination.transactions:
         context.read<TransactionsBloc>().add(const TransactionsStarted());
@@ -77,6 +88,34 @@ class _AppShellState extends State<AppShell> {
       case NavDestination.import:
         // `ImportBloc` tự nạp danh sách tài khoản ở `ImportStarted`, phát ra
         // ngay khi khung ứng dụng dựng lên, nên không có gì phải làm thêm.
+        break;
+    }
+  }
+
+  /// Đọc lại dữ liệu của một tab đã mở trước đó.
+  ///
+  /// Bốn trang sống suốt phiên trong [TabTransition] và mỗi trang chỉ đọc dữ
+  /// liệu **một lần** ở sự kiện `Started` của nó. Điều đó đúng với một trang chỉ
+  /// đọc thứ nó tự ghi, nhưng ở đây tab Nhập ghi vào đúng bảng mà tab Giao dịch,
+  /// Đối soát và Thống kê đọc: nhập xong rồi sang Giao dịch thì thứ hiện ra là
+  /// ảnh chụp từ lúc khởi động — trống trơn, không một lời giải thích. Quay lại
+  /// một tab là lúc duy nhất biết chắc người dùng sắp nhìn nó, nên đọc lại ở
+  /// đây, không phải sau mỗi lần ghi.
+  ///
+  /// Giao dịch dùng `TransactionsRefreshed` chứ không phải `TransactionsStarted`:
+  /// bộ lọc và từ khoá người dùng đang đặt là của họ, đọc lại dữ liệu không phải
+  /// lý do để xoá chúng.
+  void _refresh(NavDestination destination) {
+    switch (destination) {
+      case NavDestination.transactions:
+        context.read<TransactionsBloc>().add(const TransactionsRefreshed());
+      case NavDestination.reconciliation:
+        context.read<ReconciliationBloc>().add(const ReconciliationStarted());
+      case NavDestination.statistics:
+        context.read<StatisticsBloc>().add(const StatisticsStarted());
+      case NavDestination.import:
+        // Tab Nhập là nơi **ghi**; nó không có ảnh chụp nào để lỡ nhịp, và một
+        // lượt nhập đang chạy thì càng không được khởi động lại.
         break;
     }
   }
@@ -117,6 +156,8 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
 
+    final compact = sizeClass.usesBottomNavigation;
+
     return BlocConsumer<AppShellBloc, AppShellState>(
       listenWhen: (previous, current) =>
           previous.pendingNavigation != current.pendingNavigation &&
@@ -125,6 +166,11 @@ class _AppShellState extends State<AppShell> {
       builder: (context, state) {
         final body = Column(
           children: <Widget>[
+            // Không có app bar ở bản rộng thì chỉ báo tác vụ nền phải có chỗ
+            // khác, và nó vẫn phải nằm ngoài [IndexedStack]: người dùng được
+            // phép rời tab trong lúc nhập, nên thứ nói "việc chưa xong" không
+            // thể thuộc về một tab nào.
+            if (!compact) const _BackgroundWorkIndicator(asStrip: true),
             if (state.recoveryNotice case final notice?)
               Padding(
                 padding: const EdgeInsets.all(Gap.screen),
@@ -136,8 +182,11 @@ class _AppShellState extends State<AppShell> {
                 ),
               ),
             Expanded(
-              child: IndexedStack(
+              child: TabTransition(
                 index: state.destination.index,
+                // Chỉ bản mobile: đổi tab ở đó là thay cả màn hình, nên cần
+                // chút chuyển cảnh để mắt theo kịp.
+                enabled: compact,
                 children: <Widget>[
                   for (final destination in NavDestination.values)
                     _started.contains(destination)
@@ -150,11 +199,8 @@ class _AppShellState extends State<AppShell> {
         );
 
         return Scaffold(
-          appBar: _ShellAppBar(
-            destination: state.destination,
-            compact: sizeClass.usesBottomNavigation,
-          ),
-          body: sizeClass.usesBottomNavigation
+          appBar: compact ? _ShellAppBar(destination: state.destination) : null,
+          body: compact
               ? body
               : Row(
                   children: <Widget>[
@@ -162,14 +208,12 @@ class _AppShellState extends State<AppShell> {
                       destination: state.destination,
                       showLabels: sizeClass.showsNavigationLabels,
                       onSelected: _select,
-                      onSettings: () =>
-                          Navigator.of(context)
-                              .pushNamed(LedgerRoutes.settings),
+                      onSettings: () => _openSettings(context),
                     ),
                     Expanded(child: body),
                   ],
                 ),
-          bottomNavigationBar: sizeClass.usesBottomNavigation
+          bottomNavigationBar: compact
               ? NavBar(destination: state.destination, onSelected: _select)
               : null,
         );
@@ -193,21 +237,57 @@ class _AppShellState extends State<AppShell> {
   };
 
   void _select(NavDestination destination) {
-    _ensureStarted(destination);
+    final wasStarted = _started.contains(destination);
+    final compact = WindowSizeClass.of(
+      MediaQuery.sizeOf(context).width,
+    ).usesBottomNavigation;
+    if (!compact) {
+      _ensureStarted(destination);
+      // Đã mở trước đó thì `_ensureStarted` không làm gì, và trang giữ nguyên
+      // ảnh chụp cũ của nó — xem [_refresh].
+      if (wasStarted) _refresh(destination);
+      context.read<AppShellBloc>().add(
+        AppShellDestinationSelected(destination),
+      );
+      return;
+    }
+
+    // Bản hẹp có chuyển cảnh [TabTransition]: trang được **dựng** ngay để có
+    // thứ trượt vào, nhưng việc đọc cơ sở dữ liệu và dựng lại trang theo dữ
+    // liệu mới được hoãn tới khi chuyển cảnh xong. Làm cả hai cùng lúc là
+    // nguyên nhân chính của những lần đổi tab bị khựng: truy vấn chiếm luồng
+    // và một lượt dựng lại cả trang rơi đúng vào giữa 320ms trượt.
+    if (!wasStarted) setState(() => _started.add(destination));
     context.read<AppShellBloc>().add(AppShellDestinationSelected(destination));
+    Future<void>.delayed(TabTransition.duration, () {
+      if (!mounted) return;
+      if (!wasStarted) {
+        // Nạp lần đầu luôn phải chạy, kể cả khi người dùng đã bấm sang tab
+        // khác: bỏ nó thì trang đứng ở trạng thái chờ mãi, vì lần chọn sau
+        // chỉ còn là "đọc lại".
+        _load(destination);
+      } else if (context.read<AppShellBloc>().state.destination ==
+          destination) {
+        // Đọc lại thì chỉ khi người dùng vẫn đang ở tab này: bấm lướt qua
+        // một tab không phải lý do để đọc lại dữ liệu mà không ai xem.
+        _refresh(destination);
+      }
+    });
   }
 }
 
-/// App bar của khung: tiêu đề, chỉ báo tác vụ nền, và các hành động của tab.
+/// App bar của khung, và **chỉ ở bản hẹp**: tiêu đề màn, chỉ báo tác vụ nền,
+/// nút Export, lối vào Cài đặt.
+///
+/// Bản rộng không dựng nó — lý do nằm ở ghi chú của [AppShell]. Nhờ vậy mọi lựa
+/// chọn dưới đây là lựa chọn của một màn hẹp, không còn phải hỏi lại bề rộng:
+/// nhãn tiến độ lược đi vì không đủ chỗ cho cả tiêu đề lẫn một câu chữ, Export
+/// thu về một icon, và bánh răng Cài đặt có mặt vì ở đây không có rail để chứa
+/// nó.
 class _ShellAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ShellAppBar({required this.destination, required this.compact});
+  const _ShellAppBar({required this.destination});
 
   final NavDestination destination;
-
-  /// Ở Compact, bánh răng Cài đặt nằm ở app bar (rail không tồn tại), và nhãn
-  /// tiến độ bị lược đi — chỉ còn dải vạch, vì bề rộng ở đó không đủ cho cả tiêu
-  /// đề lẫn một câu chữ.
-  final bool compact;
 
   @override
   Size get preferredSize => const Size.fromHeight(56);
@@ -220,36 +300,36 @@ class _ShellAppBar extends StatelessWidget implements PreferredSizeWidget {
           child: Text(destination.label, overflow: TextOverflow.ellipsis),
         ),
         const SizedBox(width: Gap.md),
-        _BackgroundWorkIndicator(showLabel: !compact),
+        const _BackgroundWorkIndicator(),
       ],
     ),
     actions: <Widget>[
       if (destination == NavDestination.transactions)
-        Padding(
-          padding: const EdgeInsets.only(right: Gap.sm),
-          child: _ExportTransactionsButton(iconOnly: compact),
-        ),
-      if (compact)
-        IconButton(
-          tooltip: 'Settings',
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () =>
-              Navigator.of(context).pushNamed(LedgerRoutes.settings),
-        ),
+        const ExportTransactionsButton(iconOnly: true),
+      IconButton(
+        tooltip: 'Settings',
+        icon: const Icon(Icons.settings_outlined),
+        onPressed: () => _openSettings(context),
+      ),
       const SizedBox(width: Gap.sm),
     ],
   );
 }
 
-/// Frame Pulse thu nhỏ trên app bar khi một tác vụ nền đang chạy.
+/// Frame Pulse thu nhỏ, hiện khi một tác vụ nền đang chạy.
 ///
 /// Người dùng được phép rời tab trong lúc nhập hoặc quét, nên phải có một chỗ
 /// nói rằng việc đó chưa xong. Sáu vạch thay vì mười hai: nó là lời nhắc, không
 /// phải chỉ báo chính.
 class _BackgroundWorkIndicator extends StatelessWidget {
-  const _BackgroundWorkIndicator({required this.showLabel});
+  const _BackgroundWorkIndicator({this.asStrip = false});
 
-  final bool showLabel;
+  /// Dựng thành một dải ngang có nền và đường kẻ, cho chỗ đứng ở đầu thân trang
+  /// của bản rộng; mặc định là dạng gọn để nhét vào app bar của bản hẹp.
+  ///
+  /// Dải chỉ tồn tại khi thực sự có việc đang chạy. Một khung rỗng luôn hiện sẽ
+  /// lấy mất một dải ngang của bảng trong suốt cả phiên để nói "không có gì".
+  final bool asStrip;
 
   @override
   Widget build(BuildContext context) {
@@ -271,19 +351,37 @@ class _BackgroundWorkIndicator extends StatelessWidget {
               final label = importState.isRunning
                   ? 'Importing ${importState.progress?.processedTotalText ?? ''}'
                   : 'Scanning for internal transfers';
-              return Row(
+              final row = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Tooltip(message: label, child: const FramePulse.compact()),
-                  if (showLabel) ...<Widget>[
+                  if (asStrip) ...<Widget>[
                     const SizedBox(width: Gap.sm),
-                    Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: LedgerText.caption.copyWith(color: colors.inkMute),
+                    Flexible(
+                      child: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                        style: LedgerText.caption.copyWith(
+                          color: colors.inkMute,
+                        ),
+                      ),
                     ),
                   ],
                 ],
+              );
+              if (!asStrip) return row;
+
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Gap.screen,
+                  vertical: Gap.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.canvasSoft,
+                  border: Border(bottom: BorderSide(color: colors.hairline)),
+                ),
+                child: row,
               );
             },
           ),
@@ -291,40 +389,39 @@ class _BackgroundWorkIndicator extends StatelessWidget {
   }
 }
 
-class _ExportTransactionsButton extends StatelessWidget {
-  const _ExportTransactionsButton({required this.iconOnly});
-
-  final bool iconOnly;
-
-  @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<TransactionsBloc, TransactionsState>(
-        buildWhen: (previous, current) =>
-            previous.status != current.status ||
-            previous.chips != current.chips,
-        builder: (context, state) {
-          void open() => ExportDialog.open(
-            context,
-            ExportTransactionsSource(
-              filter: state.filter,
-              context: state.context,
-              chips: state.chips,
-            ),
-          );
-          final onPressed = state.status.isReady ? open : null;
-
-          if (iconOnly) {
-            return IconButton(
-              tooltip: 'Export transactions',
-              icon: const Icon(Icons.file_download_outlined),
-              onPressed: onPressed,
-            );
-          }
-          return OutlinedButton.icon(
-            onPressed: onPressed,
-            icon: const Icon(Icons.file_download_outlined, size: 16),
-            label: const Text('Export'),
-          );
-        },
-      );
+/// Mở Cài đặt, rồi báo các tab đọc lại dữ liệu khi quay về.
+///
+/// Cài đặt là nơi dữ liệu đổi mà không tab nào hay: Quản lý tài khoản tạo, đổi
+/// tên và xoá tài khoản (xoá kéo theo giao dịch của nó), còn khôi phục bản sao
+/// lưu thay cả cơ sở dữ liệu. Quay về từ Cài đặt không phải một lần đổi tab, nên
+/// [_AppShellState._refresh] không chạy — phải báo ở đây.
+///
+/// * Tab Nhập: người dùng hay rời đi đúng lúc đang ở bước 2 — thiếu tài khoản
+///   thì mới phải đi tạo — và khi quay lại, bước 2 không được "đi vào" lần nữa.
+/// * Tab Giao dịch: luôn đã khởi động, và Filter Panel của nó giữ danh sách tài
+///   khoản.
+/// * Tab đang nhìn (Đối soát/Thống kê): nó đang hiện ảnh chụp cũ ngay trước mắt.
+///   Tab khác sẽ tự đọc lại khi được chọn.
+///
+/// Lấy BLoC **trước** `await`: sau khi route đóng, `context` này có thể không
+/// còn gắn vào cây.
+Future<void> _openSettings(BuildContext context) async {
+  final importBloc = context.read<ImportBloc>();
+  final transactionsBloc = context.read<TransactionsBloc>();
+  final shellBloc = context.read<AppShellBloc>();
+  final reconciliationBloc = context.read<ReconciliationBloc>();
+  final statisticsBloc = context.read<StatisticsBloc>();
+  await Navigator.of(context).pushNamed(LedgerRoutes.settings);
+  if (!importBloc.isClosed) importBloc.add(const ImportAccountsRefreshed());
+  if (!transactionsBloc.isClosed) {
+    transactionsBloc.add(const TransactionsRefreshed());
+}
+  switch (shellBloc.state.destination) {
+    case NavDestination.reconciliation when !reconciliationBloc.isClosed:
+      reconciliationBloc.add(const ReconciliationStarted());
+    case NavDestination.statistics when !statisticsBloc.isClosed:
+      statisticsBloc.add(const StatisticsStarted());
+    case _:
+      break;
+  }
 }

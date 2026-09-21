@@ -71,7 +71,7 @@ final class TransactionContext {
     if (isEmpty) return filter;
     return TransactionFilter(
       keyword: filter.keyword,
-      accountId: filter.accountId,
+      accountIds: filter.accountIds,
       dateRange: filter.dateRange,
       amountRange: filter.amountRange,
       currency: filter.currency,

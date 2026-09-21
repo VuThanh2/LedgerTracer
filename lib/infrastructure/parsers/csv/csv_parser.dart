@@ -71,6 +71,8 @@ final class CsvParser implements StatementParser {
   @override
   Iterable<ParseLineResult> parseLines(Uint8List bytes) sync* {
     ColumnLayout? layout;
+    var rowsRead = 0;
+    var rowsOutsideTable = 0;
     for (final record in _records(bytes)) {
       if (layout == null) {
         // Mọi thứ trước dòng tiêu đề là phần giới thiệu của ngân hàng (tên chủ
@@ -81,6 +83,11 @@ final class CsvParser implements StatementParser {
         continue;
       }
       if (record.isBlank) continue;
+      if (TabularStatement.isOutsideTable(layout: layout, cells: record.cells)) {
+        rowsOutsideTable++;
+        continue;
+      }
+      rowsRead++;
       yield TabularStatement.readRow(
         layout: layout,
         cells: record.cells,
@@ -97,6 +104,13 @@ final class CsvParser implements StatementParser {
       throw const FormatException(
         'No header row with a date column and an amount column was found in the '
       'CSV file.',
+      );
+    }
+    // Chốt chặn đi kèm `isOutsideTable` — lý do ở chính hàm đó.
+    if (rowsRead == 0 && rowsOutsideTable > 0) {
+      throw const FormatException(
+        'A header row was found, but no row below it carries a transaction '
+      'date, so the date column does not line up with the data.',
       );
     }
   }

@@ -88,8 +88,7 @@ class TransactionDetailPage extends StatelessWidget {
 
   Future<void> _openEditor(BuildContext context, int transactionId) async {
     final transactions = context.read<TransactionsBloc>();
-    final saved = await Navigator.of(context)
-        .push(TransactionEditPage.route(context, transactionId));
+    final saved = await TransactionEditPage.open(context, transactionId);
     if (saved ?? false) {
       transactions.add(
         TransactionsInvalidated(changedTransactionId: transactionId),
@@ -133,8 +132,8 @@ class _DetailFailure extends StatelessWidget {
         children: <Widget>[
           const BannerMessage(
             FeedbackMessage.danger(
-              'Could not open this transaction. It may have been deleted, or '
-              'the read failed — try again to find out which.',
+              'Could not open this transaction. It may have been deleted — '
+              'try again.',
             ),
           ),
           const SizedBox(height: Gap.lg),

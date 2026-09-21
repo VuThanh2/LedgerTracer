@@ -27,8 +27,7 @@ class RejectedList extends StatelessWidget {
       if (state.rejectedCountIsCapped) ...<Widget>[
         const BannerMessage(
           FeedbackMessage.info(
-            'The rejection log is longer than this screen reads in. The list '
-            'below shows the most recent verdicts.',
+            'Showing the most recent rejections only.',
           ),
         ),
         const SizedBox(height: Gap.lg),

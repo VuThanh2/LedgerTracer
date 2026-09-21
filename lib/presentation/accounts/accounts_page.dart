@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../app/dependencies.dart';
 import '../../app/theme.dart';
+import '../shared/widgets/notice_overlay.dart';
+import '../shared/widgets/viewport_center.dart';
 import '../shared/failures/feedback_message.dart';
+import '../shared/widgets/pushed_page_scaffold.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/empty_state.dart';
 import 'bloc/accounts_bloc.dart';
@@ -76,21 +79,18 @@ class _AccountsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bank accounts'),
-        actions: <Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-            child: Builder(
-              builder: (context) => FilledButton(
-                onPressed: () => _openForm(context),
-                child: const Text('Add account'),
-              ),
-            ),
+    return PushedPageScaffold(
+      title: 'Bank accounts',
+      actions: <Widget>[
+        // `Builder` để nút lấy được một context nằm **dưới** khung này: form
+        // được mở như một route/sheet con của màn, không của màn gọi nó.
+        Builder(
+          builder: (context) => FilledButton(
+            onPressed: () => _openForm(context),
+            child: const Text('Add account'),
           ),
-        ],
-      ),
+        ),
+      ],
       body: BlocConsumer<AccountsBloc, AccountsState>(
         listenWhen: (previous, current) =>
             previous.notice != current.notice ||
@@ -101,14 +101,40 @@ class _AccountsView extends StatelessWidget {
             return;
           }
           if (state.notice case final notice?) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(notice.message.text)));
+            showNotice(context, notice.message);
           }
         },
         builder: (context, state) {
           if (state.status.isInitial) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          // Chưa có tài khoản nào thì panel là **toàn bộ** nội dung của màn,
+          // nên nó về giữa màn hình. Câu giải thích bên trên nói về việc sửa
+          // số tài khoản đã học sai — chưa có tài khoản thì chưa có gì để
+          // sửa, nên nó cũng đi cùng.
+          if (state.isEmpty) {
+            return ViewportCenter(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (state.loadError case final FeedbackMessage error)
+                    ...<Widget>[
+                      BannerMessage(error),
+                      const SizedBox(height: Gap.lg),
+                    ],
+                  EmptyState(
+                    title: 'No accounts yet',
+                    message:
+                        'Each statement file is imported into one of your bank '
+                        'accounts. Create one to start importing.',
+                    icon: Icons.account_balance_outlined,
+                    actionLabel: 'Add account',
+                    onAction: () => _openForm(context),
+                  ),
+                ],
+              ),
+            );
           }
 
           return ListView(
@@ -124,27 +150,16 @@ class _AccountsView extends StatelessWidget {
                 style: LedgerText.caption.copyWith(color: colors.inkMute),
               ),
               const SizedBox(height: Gap.lg),
-              if (state.isEmpty)
-                EmptyState(
-                  title: 'No accounts declared yet',
-                  message:
-                      'An account is where the transactions of a statement '
-                      'file land. Create one to start importing.',
-                  icon: Icons.account_balance_outlined,
-                  actionLabel: 'Add account',
-                  onAction: () => _openForm(context),
-                )
-              else
-                for (final account in state.accounts) ...<Widget>[
-                  AccountListTile(
-                    account: account,
-                    onEdit: () => _openForm(context, account: account),
-                    onDelete: () => context.read<AccountsBloc>().add(
-                      AccountDeleteRequested(account.accountId),
-                    ),
+              for (final account in state.accounts) ...<Widget>[
+                AccountListTile(
+                  account: account,
+                  onEdit: () => _openForm(context, account: account),
+                  onDelete: () => context.read<AccountsBloc>().add(
+                    AccountDeleteRequested(account.accountId),
                   ),
-                  const SizedBox(height: Gap.sm),
-                ],
+                ),
+                const SizedBox(height: Gap.sm),
+              ],
             ],
           );
         },

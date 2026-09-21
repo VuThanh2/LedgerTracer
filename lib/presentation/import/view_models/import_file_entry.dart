@@ -110,6 +110,17 @@ final class ImportFileEntry {
     decision: clearDecision ? null : (decision ?? this.decision),
   );
 
+  /// Bỏ tài khoản đã gán, cùng mọi thứ suy ra từ nó.
+  ///
+  /// Kết quả đối chiếu và quyết định cho cảnh báo lệch số đều gắn với **một**
+  /// tài khoản cụ thể; giữ chúng lại khi tài khoản đã bị bỏ nghĩa là để một
+  /// "bỏ qua file" cũ âm thầm áp vào lần gán sau.
+  ImportFileEntry unassigned() => ImportFileEntry(
+    fileName: fileName,
+    recognized: recognized,
+    unrecognizedReason: unrecognizedReason,
+  );
+
   /// Đổi sang đầu vào của use case nhập. Chỉ gọi được khi [isReady].
   ImportFileInput toInput() => ImportFileInput(
     fileName: fileName,

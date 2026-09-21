@@ -1,4 +1,5 @@
 import '../view_models/import_file_entry.dart';
+import 'import_state.dart';
 
 /// Những gì xảy ra ở tab *Nhập mới* — stepper bốn bước của UC-02.
 sealed class ImportEvent {
@@ -8,6 +9,16 @@ sealed class ImportEvent {
 /// Mở tab: nạp danh sách tài khoản để bước 2 có gì mà gán.
 final class ImportStarted extends ImportEvent {
   const ImportStarted();
+}
+
+/// Đọc lại danh sách tài khoản mà không đổi bước đang đứng.
+///
+/// Phát khi người dùng quay về từ Cài đặt — nơi có màn Quản lý tài khoản. Họ
+/// có thể rời đi **ngay giữa bước 2** để tạo tài khoản, và khi quay lại thì
+/// bước 2 không được "đi vào" lần nữa, nên nếu không có sự kiện này ô chọn vẫn
+/// thiếu tài khoản vừa tạo.
+final class ImportAccountsRefreshed extends ImportEvent {
+  const ImportAccountsRefreshed();
 }
 
 /// Bước 1 — bấm chọn file. Mở hộp thoại của nền tảng rồi nhận diện định dạng
@@ -25,6 +36,11 @@ final class ImportFileRemoved extends ImportEvent {
 
 /// Bước 2 — gán tài khoản đích cho một file, rồi đối chiếu số tài khoản
 /// (UC-02 bước 3, 4).
+///
+/// [accountId] `null` là **bỏ gán**: file quay về trạng thái chưa chọn tài
+/// khoản. Gộp vào cùng sự kiện chứ không tách riêng vì hai việc phải xếp hàng
+/// tuần tự với nhau — bỏ gán ngay sau khi gán thì lượt đối chiếu của lần gán,
+/// vốn chạy bất đồng bộ, không được phép về sau và gán lại.
 final class ImportFileAccountAssigned extends ImportEvent {
   const ImportFileAccountAssigned({
     required this.fileName,
@@ -32,7 +48,7 @@ final class ImportFileAccountAssigned extends ImportEvent {
   });
 
   final String fileName;
-  final int accountId;
+  final int? accountId;
 }
 
 /// Tạo tài khoản mới ngay tại bước 2 rồi gán luôn cho file đang xét (UC-01,
@@ -69,6 +85,17 @@ final class ImportStepAdvanced extends ImportEvent {
 /// là kết cục đã ghi xuống.
 final class ImportStepReverted extends ImportEvent {
   const ImportStepReverted();
+}
+
+/// Bấm thẳng vào một bước trên thanh stepper.
+///
+/// Không phải mọi bước đều tới được: `ImportState.canJumpTo` giữ luật, và BLoC
+/// hỏi lại nó chứ không tin vào việc giao diện đã khoá nút — một cú bấm đúng vào
+/// lúc trạng thái vừa đổi vẫn tới được đây.
+final class ImportStepSelected extends ImportEvent {
+  const ImportStepSelected(this.step);
+
+  final ImportStep step;
 }
 
 /// Bước 3 — bắt đầu nhập (UC-02 bước 5).

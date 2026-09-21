@@ -77,7 +77,42 @@ final class BenchmarkRunViewModel {
     required this.itemsProcessedText,
     required this.degraded,
     required this.frames,
+    this.repeatCount = 1,
+    this.rangeText,
   });
+
+  /// Gộp nhiều lần đo **cùng một cấu hình** thành một dòng: dòng của lần đo
+  /// trung vị (theo tổng thời gian), kèm khoảng nhanh nhất – chậm nhất.
+  ///
+  /// Lấy trung vị chứ không lấy trung bình: một lần đo bị hệ điều hành chen
+  /// ngang (GC, một tiến trình khác) kéo trung bình đi xa, còn trung vị thì
+  /// không. Thống kê khung hình đi theo **đúng** lần đo trung vị đó, không cộng
+  /// gộp — p95 của năm lượt trộn lẫn không phải p95 của lượt nào cả.
+  factory BenchmarkRunViewModel.medianOf(
+    List<(BenchmarkRun, FrameTimingStats)> measured,
+  ) {
+    assert(measured.isNotEmpty, 'nothing to summarise');
+    final sorted = <(BenchmarkRun, FrameTimingStats)>[...measured]
+      ..sort((a, b) => a.$1.elapsed.compareTo(b.$1.elapsed));
+    final (run, frames) = sorted[(sorted.length - 1) ~/ 2];
+    final single = BenchmarkRunViewModel.of(run, frames: frames);
+    if (sorted.length == 1) return single;
+    return BenchmarkRunViewModel(
+      modeLabel: single.modeLabel,
+      parallelism: single.parallelism,
+      batchSize: single.batchSize,
+      elapsedText: single.elapsedText,
+      throughputText: single.throughputText,
+      batchCountText: single.batchCountText,
+      itemsProcessedText: single.itemsProcessedText,
+      degraded: single.degraded,
+      frames: single.frames,
+      repeatCount: sorted.length,
+      rangeText:
+          '${sorted.first.$1.elapsed.inMilliseconds}–'
+          '${sorted.last.$1.elapsed.inMilliseconds} ms',
+    );
+  }
 
   factory BenchmarkRunViewModel.of(
     BenchmarkRun run, {
@@ -117,6 +152,13 @@ final class BenchmarkRunViewModel {
   /// Thống kê khung hình đo được **trong lúc** lượt này chạy — hệ quả thứ hai
   /// của việc mất isolate, thứ mà tổng thời gian không nói ra được.
   final FrameTimingStats frames;
+
+  /// Số lần đo đã gộp vào dòng này; 1 là một lần đo đơn như trước.
+  final int repeatCount;
+
+  /// Khoảng nhanh nhất – chậm nhất khi [repeatCount] > 1. Khoảng hẹp nghĩa là
+  /// con số trung vị đáng tin; khoảng rộng nghĩa là thiết bị đang bị nhiễu.
+  final String? rangeText;
 
   static String _modeLabelOf(ExecutionMode mode) => switch (mode) {
     ExecutionMode.isolate => 'Background isolate',

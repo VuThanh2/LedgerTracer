@@ -115,7 +115,6 @@ class ToggleChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         constraints: const BoxConstraints(minHeight: 32),
-        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? colors.primaryWash : colors.canvas,
           borderRadius: Corner.pill,
@@ -123,12 +122,20 @@ class ToggleChip extends StatelessWidget {
             color: selected ? colors.primary : colors.hairlineControl,
           ),
         ),
+        // `Center` với hệ số 1 thay cho `Container.alignment`: căn chữ giữa
+        // chip mà **không** chiếm hết bề ngang. `alignment` làm Container nở ra
+        // tới cỡ tối đa cha cho phép, và trong một `Wrap` đó là cả bề ngang
+        // panel — một chip "VND" duy nhất thành một thanh kéo dài cả dòng.
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
         child: Text(
           label,
           style: LedgerText.micro.copyWith(
             color: selected ? colors.primaryDeep : colors.inkSecondary,
           ),
         ),
+      ),
       ),
     );
   }

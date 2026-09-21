@@ -81,6 +81,10 @@ class TonePill extends StatelessWidget {
     decoration: BoxDecoration(color: background, borderRadius: Corner.pill),
     child: Text(
       label.toUpperCase(),
+      // Chỉ có tác dụng khi cha ràng buộc bề rộng (pill nằm trong `Flexible`);
+      // ở mọi chỗ khác pill vẫn ôm sát chữ như trước.
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: LedgerText.microCap.copyWith(color: foreground),
     ),
   );

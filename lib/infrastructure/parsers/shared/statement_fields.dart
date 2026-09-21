@@ -44,7 +44,7 @@ final class ColumnLayout {
   factory ColumnLayout.fromHeader(List<String?> header) {
     final indexes = <StatementColumn, int>{};
     for (var index = 0; index < header.length; index++) {
-      final name = SearchText.normalize(header[index] ?? '');
+      final name = _headerName(header[index] ?? '');
       if (name.isEmpty) continue;
       final column = _columnFor(name);
       // Cột đầu tiên mang một vai trò là cột giữ vai trò đó: sao kê hay có thêm
@@ -181,12 +181,36 @@ final class ColumnLayout {
       for (final alias in entry.value) alias: entry.key,
   };
 
+  /// Tên cột sau khi chuẩn hoá, với dấu câu ngăn cách đổi thành khoảng trắng.
+  ///
+  /// `SearchText.normalize` cố ý **giữ** dấu câu: nó còn dựng nội dung chuyển
+  /// khoản đem lưu và fingerprint, nơi mỗi ký tự đều có nghĩa. Nhưng tiêu đề cột
+  /// của sao kê Việt Nam gần như luôn song ngữ, viết `"Ngày/ TNX Date"` hay
+  /// `"Số tiền ghi nợ/ Debit"` — dấu `/` và ký tự xuống dòng ở đó là dấu ngăn
+  /// giữa hai thứ tiếng, không phải một phần của tên cột. Không gỡ chúng thì
+  /// `"ngay/ tnx date"` không khớp bí danh `ngay` nào cả, không tìm ra cột ngày,
+  /// và **cả file** bị từ chối — đúng thứ đã xảy ra với sao kê Vietcombank.
+  ///
+  /// Phép gỡ này chỉ sống trong việc đọc tiêu đề. Dữ liệu vẫn đi qua
+  /// `SearchText.normalize` nguyên vẹn.
+  static String _headerName(String raw) => SearchText.normalize(
+    raw.replaceAll(_headerSeparatorRun, ' '),
+  );
+
   static StatementColumn? _columnFor(String normalizedName) {
     final exact = _byAlias[normalizedName];
     if (exact != null) return exact;
     // Khớp gần đúng cho các biến thể có thêm chữ ("ngay giao dich (dd/mm/yyyy)",
-    // "so tien (vnd)"). Chỉ chạy khi khớp đúng đã trượt, và duyệt theo thứ tự
-    // khai báo để kết quả lặp lại được giữa các lần chạy.
+    // "so tien (vnd)"). Chỉ chạy khi khớp đúng đã trượt.
+    //
+    // Bí danh **dài nhất** thắng, không phải bí danh gặp trước. `"so tien ghi
+    // no/ debit"` khớp cả `so tien` (cột số tiền có dấu) lẫn `so tien ghi no`
+    // (cột ghi nợ); lấy theo thứ tự khai báo sẽ chọn `so tien`, và rồi cột ghi
+    // có cũng rơi vào cùng vai trò đó nên bị bỏ hẳn — sao kê hai cột biến thành
+    // sao kê một cột đọc nhầm, tiền ra mang dấu dương và mọi dòng tiền vào
+    // thành dòng lỗi. Bí danh dài hơn luôn là bí danh cụ thể hơn.
+    StatementColumn? best;
+    var bestLength = 0;
     for (final entry in _aliases.entries) {
       for (final alias in entry.value) {
         // Bí danh quá ngắn không được khớp theo tiền tố. `co` và `no` là bí danh
@@ -194,13 +218,20 @@ final class ColumnLayout {
         // cột tên `co quan` sẽ bị đọc thành cột tiền vào — và dòng tiền của cả
         // file đảo chiều mà không có lỗi nào báo.
         if (alias.length < _minPrefixAliasLength) continue;
-        if (normalizedName.startsWith('$alias ')) return entry.key;
+        if (alias.length <= bestLength) continue;
+        if (normalizedName.startsWith('$alias ')) {
+          best = entry.key;
+          bestLength = alias.length;
+        }
       }
     }
-    return null;
+    return best;
   }
 
   static const int _minPrefixAliasLength = 4;
+
+  /// Dấu ngăn giữa hai thứ tiếng trong một tiêu đề cột song ngữ.
+  static final RegExp _headerSeparatorRun = RegExp(r'[/\|;:()\[\]]+');
 }
 
 /// Một ô sao kê không đọc được thành giá trị của Domain.

@@ -160,8 +160,9 @@ class _PinFormDialogState extends State<PinFormDialog> {
               else
                 const BannerMessage(
                   FeedbackMessage.info(
-                    'A PIN is 4 to 6 digits. There is no server, so a forgotten '
-                    'PIN can only be cleared by deleting all local data.',
+                    'Use 4 to 6 digits. A forgotten PIN cannot be recovered — '
+                    'the only way back in is to delete all data on this '
+                    'device.',
                   ),
                 ),
             ],

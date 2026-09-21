@@ -68,8 +68,8 @@ final class ExportState {
   }
 
   String get stageLabel => switch (stage) {
-    ExportStage.collecting => 'Collecting rows…',
-    ExportStage.encoding => 'Encoding the file…',
+    ExportStage.collecting => 'Gathering data…',
+    ExportStage.encoding => 'Writing the file…',
     ExportStage.saving => 'Saving…',
     null => '',
   };

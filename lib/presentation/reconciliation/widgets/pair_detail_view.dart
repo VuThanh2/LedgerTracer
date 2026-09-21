@@ -22,12 +22,14 @@ class PairLegs extends StatelessWidget {
         label: 'Money out',
         isIncoming: false,
         expanded: expanded,
+        wide: isWide,
       ),
       _Leg(
         side: pair.incoming,
         label: 'Money in',
         isIncoming: true,
         expanded: expanded,
+        wide: isWide,
       ),
     ];
 
@@ -57,6 +59,7 @@ class _Leg extends StatelessWidget {
     required this.label,
     required this.isIncoming,
     required this.expanded,
+    required this.wide,
   });
 
   final PairSideViewModel side;
@@ -64,9 +67,42 @@ class _Leg extends StatelessWidget {
   final bool isIncoming;
   final bool expanded;
 
+  /// Hình thái rộng (web). Chi tiết của một vế được nâng một bậc cỡ chữ ở
+  /// đây, vì hai ô nằm cạnh nhau trên một hàng rộng: khoảng trống dư ra khiến thang
+  /// cỡ của bản hẹp đọc như chú thích chứ không như nội dung chính. Bản mobile
+  /// giữ nguyên thang cũ, nơi thẻ đã chật sẵn.
+  final bool wide;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
+    // Thứ thiếu ở ô này là tương phản của chính chữ — cỡ, độ đậm, màu mực —
+    // không phải thêm một lớp nền hay khung nữa: hộp đã có viền riêng, tô thêm nền
+    // chỉ làm hai vế tranh nhau với pill trạng thái ở trên.
+    final labelStyle = LedgerText.microCap.copyWith(
+      color: colors.inkSecondary,
+      fontSize: wide ? 12 : null,
+      fontWeight: wide ? FontWeight.w600 : null,
+      letterSpacing: wide ? 0.6 : null,
+    );
+    final amountStyle = wide
+        ? LedgerText.bodyTabular.copyWith(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.54,
+          )
+        : null;
+    final nameStyle = wide
+        ? LedgerText.bodyMd.copyWith(
+            fontWeight: FontWeight.w500,
+            color: colors.ink,
+          )
+        : LedgerText.bodySm.copyWith(color: colors.ink);
+    final dateStyle = LedgerText.caption.copyWith(
+      color: wide ? colors.inkSecondary : colors.inkMute,
+      fontSize: wide ? 14 : null,
+    );
+
     return Container(
       padding: const EdgeInsets.all(Gap.lg),
       decoration: BoxDecoration(
@@ -79,37 +115,40 @@ class _Leg extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Text(
-                label.toUpperCase(),
-                style: LedgerText.microCap.copyWith(color: colors.inkSecondary),
-              ),
+              Text(label.toUpperCase(), style: labelStyle),
               const Spacer(),
-              MoneyText(side.amountText, isIncoming: isIncoming),
+              MoneyText(
+                side.amountText,
+                isIncoming: isIncoming,
+                style: amountStyle,
+              ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: wide ? Gap.sm : 6),
           Text(
             side.accountName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: LedgerText.bodySm.copyWith(color: colors.ink),
+            style: nameStyle,
           ),
-          Text(
-            side.dateText,
-            style: LedgerText.caption.copyWith(color: colors.inkMute),
-          ),
+          Text(side.dateText, style: dateStyle),
           if (expanded) ...<Widget>[
             const SizedBox(height: Gap.sm),
             Divider(color: colors.hairline, height: 1),
             const SizedBox(height: Gap.sm),
             Text(
               side.counterpartyText.isEmpty ? '—' : side.counterpartyText,
-              style: LedgerText.bodySm.copyWith(color: colors.inkSecondary),
+              style: wide
+                  ? LedgerText.bodyMd.copyWith(color: colors.inkSecondary)
+                  : LedgerText.bodySm.copyWith(color: colors.inkSecondary),
             ),
             Text(
               '${side.descriptionText.isEmpty ? '—' : side.descriptionText} · '
               'row ${side.sourceLineText}',
-              style: LedgerText.caption.copyWith(color: colors.inkMute),
+              style: LedgerText.caption.copyWith(
+                color: colors.inkMute,
+                fontSize: wide ? 14 : null,
+              ),
             ),
           ],
         ],

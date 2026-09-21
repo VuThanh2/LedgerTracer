@@ -21,7 +21,7 @@ final class TransactionFilter {
   /// Ném [CurrencyMismatchError] nếu truyền cả hai mà lại lệch nhau.
   factory TransactionFilter({
     SearchText? keyword,
-    int? accountId,
+    Iterable<int> accountIds = const <int>[],
     DateRange? dateRange,
     AmountRange? amountRange,
     Currency? currency,
@@ -35,7 +35,7 @@ final class TransactionFilter {
     }
     return TransactionFilter._(
       keyword: keyword != null && keyword.isNotEmpty ? keyword : null,
-      accountId: accountId,
+      accountIds: Set<int>.unmodifiable(accountIds),
       dateRange: dateRange,
       amountRange: amountRange,
       currency: currency ?? amountRange?.currency,
@@ -46,7 +46,7 @@ final class TransactionFilter {
 
   const TransactionFilter._({
     required this.keyword,
-    required this.accountId,
+    required this.accountIds,
     required this.dateRange,
     required this.amountRange,
     required this.currency,
@@ -57,7 +57,7 @@ final class TransactionFilter {
   /// Lấy tất cả, sắp theo ngày ghi nhận — danh sách mặc định của UC-04.
   static const TransactionFilter none = TransactionFilter._(
     keyword: null,
-    accountId: null,
+    accountIds: <int>{},
     dateRange: null,
     amountRange: null,
     currency: null,
@@ -66,7 +66,15 @@ final class TransactionFilter {
   );
 
   final SearchText? keyword;
-  final int? accountId;
+
+  /// Giữ giao dịch thuộc **một trong** các tài khoản này (HOẶC giữa các tài
+  /// khoản, VÀ với mọi tiêu chí khác). Rỗng nghĩa là mọi tài khoản — không có
+  /// cách nào để tập rỗng mang nghĩa "không tài khoản nào", vì một bộ lọc chắc
+  /// chắn trả về danh sách trống thì không phải một bộ lọc.
+  ///
+  /// Là tập chứ không phải một giá trị để so sánh hai ba tài khoản (ví dụ hai
+  /// tài khoản vận hành của cùng một công ty) mà không phải bỏ lọc hẳn.
+  final Set<int> accountIds;
   final DateRange? dateRange;
   final AmountRange? amountRange;
   final Currency? currency;
@@ -88,7 +96,7 @@ final class TransactionFilter {
 
   bool get isEmpty =>
       keyword == null &&
-      accountId == null &&
+      accountIds.isEmpty &&
       dateRange == null &&
       amountRange == null &&
       currency == null &&
@@ -109,7 +117,7 @@ final class TransactionFilter {
     final activeCurrency = currency;
     return (activeKeyword == null ||
             transaction.searchText.contains(activeKeyword)) &&
-        (accountId == null || transaction.accountId == accountId) &&
+        (accountIds.isEmpty || accountIds.contains(transaction.accountId)) &&
         (activeRange == null ||
             activeRange.contains(transaction.bookingDate)) &&
         (activeAmounts == null || activeAmounts.contains(transaction.amount)) &&

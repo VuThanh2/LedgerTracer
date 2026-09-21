@@ -11,15 +11,40 @@ import '../view_models/transaction_row_view_model.dart';
 /// pixel lệch là mất khả năng quét dọc, thứ mà toàn bộ màn hình này phục vụ. Để
 /// mỗi bên tự viết số của mình là để chúng trôi khỏi nhau ở lần sửa thứ hai.
 abstract final class TransactionColumns {
-  static const double date = 84;
+  /// Đủ cho `dd/MM/yyyy` ở `caption` **trên một dòng**, sau khi trừ 24dp đệm
+  /// ngang và 3dp chỉ báo dòng đang chọn — còn 85dp cho một chuỗi cần ~71dp.
+  ///
+  /// Con số cũ là 84dp, tức 57dp cho chuỗi ấy: ngày gãy làm hai dòng và mỗi
+  /// dòng bảng cao thêm một nửa, 36dp thành 53dp. Bảng vẫn dựng được và không
+  /// test nào đỏ — thứ mất đi là đúng cái mật độ mà nó tồn tại để có.
+  static const double date = 112;
   static const double account = 176;
-  static const int counterpartyFlex = 12;
-  static const int memoFlex = 10;
+
+  /// Memo được ưu tiên chỗ hơn đối tác.
+  ///
+  /// Hai cột này từng chia 12/10 theo phía đối tác. Nhưng sao kê Việt Nam gần
+  /// như không có cột tên đối tác riêng — nội dung nằm hết ở memo — nên tỉ lệ cũ
+  /// để lại một khoảng trống rộng giữa bảng trong khi memo bị cắt bằng dấu ba
+  /// chấm ngay cạnh nó.
+  static const int counterpartyFlex = 8;
+  static const int memoFlex = 14;
   static const double status = 152;
   static const double amount = 160;
 
   /// Kẻ đậm mỗi 5 dòng để mắt bám hàng khi cuộn qua hàng nghìn dòng.
   static bool isRulerRow(int index) => index % 5 == 4;
+
+  /// Một đường kẻ dọc duy nhất, ngay trước cột Trạng thái.
+  ///
+  /// Bảng này cố ý **không** kẻ lưới: DESIGN.md dựng nó trên khoảng trắng và
+  /// canh cột, không trên đường viền. Nhưng một đường ở đúng chỗ thì khác một
+  /// cái lưới: nó cắt bảng thành hai vùng có nghĩa khác nhau — bên trái là chữ
+  /// đọc theo dòng, bên phải là phán quyết và con số quét theo cột — và cho mắt
+  /// một mốc dọc để bám khi lướt qua hàng nghìn dòng. Dùng `hairline` chứ không
+  /// phải `hairline-structure`: lặp trên mọi dòng thì sắc độ đậm sẽ thành một
+  /// cái lưới thật.
+  static Border ruleBefore(Color color) =>
+      Border(left: BorderSide(color: color));
 }
 
 /// Header dính đỉnh của bảng giao dịch.
@@ -52,7 +77,13 @@ class TransactionTableHeader extends StatelessWidget {
             child: cell('Counterparty'),
           ),
           Expanded(flex: TransactionColumns.memoFlex, child: cell('Memo')),
-          SizedBox(width: TransactionColumns.status, child: cell('Status')),
+          Container(
+            width: TransactionColumns.status,
+            decoration: BoxDecoration(
+              border: TransactionColumns.ruleBefore(colors.hairline),
+            ),
+            child: cell('Status'),
+          ),
           SizedBox(
             width: TransactionColumns.amount,
             child: cell('Amount', align: TextAlign.right),
@@ -125,17 +156,29 @@ class TransactionRowTile extends StatelessWidget {
                   horizontal: Gap.md,
                   vertical: Gap.sm,
                 ),
+                // Không bao giờ xuống dòng, kể cả khi bề rộng hụt vì một cỡ
+                // chữ hệ thống lớn hơn: cắt bằng dấu ba chấm còn giữ được chiều
+                // cao dòng, gãy dòng thì không.
                 child: Text(
                   row.dateText,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                   style: LedgerText.caption.copyWith(
                     color: colors.inkSecondary,
                   ),
                 ),
               ),
             ),
+            // Hai bậc chữ, không ba: `ink-mute` chỉ đạt tương phản 4.5:1 trên
+            // `canvas`, mà dòng bảng nằm trên `canvas-soft`. Bậc đậm dành cho
+            // thứ người dùng quét tìm — đối tác và số tiền; ngày, tài khoản và
+            // memo là ngữ cảnh. Tài khoản đặc biệt đáng hạ bậc: nó lặp lại y
+            // nguyên trên hàng nghìn dòng, nên in đậm bằng đối tác chỉ làm nhiễu
+            // đúng cột mà mắt đang tìm.
             SizedBox(
               width: TransactionColumns.account,
-              child: text(row.accountName),
+              child: text(row.accountName, color: colors.inkSecondary),
             ),
             Expanded(
               flex: TransactionColumns.counterpartyFlex,
@@ -145,15 +188,17 @@ class TransactionRowTile extends StatelessWidget {
               flex: TransactionColumns.memoFlex,
               child: text(row.descriptionText, color: colors.inkSecondary),
             ),
-            SizedBox(
+            Container(
               width: TransactionColumns.status,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Gap.md,
-                  vertical: Gap.xs,
-                ),
-                child: _StatusCell(row: row),
+              decoration: BoxDecoration(
+                border: TransactionColumns.ruleBefore(colors.hairline),
               ),
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(
+                horizontal: Gap.md,
+                vertical: Gap.xs,
+              ),
+              child: _StatusCell(row: row),
             ),
             SizedBox(
               width: TransactionColumns.amount,

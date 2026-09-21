@@ -19,6 +19,15 @@ void main() {
     });
   });
 
+  group('NumberFormatter.countOf', () {
+    test('số ít, số nhiều, và có phân nhóm hàng nghìn', () {
+      expect(NumberFormatter.countOf(1, 'file'), '1 file');
+      expect(NumberFormatter.countOf(0, 'file'), '0 files');
+      expect(NumberFormatter.countOf(1234, 'file'), '1.234 files');
+      expect(NumberFormatter.countOf(2, 'entry', 'entries'), '2 entries');
+    });
+  });
+
   group('NumberFormatter.toDecimalInput', () {
     test('đọc được cả kiểu gõ Việt Nam lẫn kiểu bàn phím số', () {
       expect(NumberFormatter.toDecimalInput('1.234.567'), '1234567');

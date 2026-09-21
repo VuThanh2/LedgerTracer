@@ -60,8 +60,8 @@ class ExportDialog extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'Every criterion below is written into the file header, so '
-                    'the export can be read back later without guessing.',
+                    'The filters below are written at the top of the file, so '
+                    'anyone reading it later knows exactly what it contains.',
                     style: LedgerText.bodyLg.copyWith(
                       color: colors.inkSecondary,
                     ),

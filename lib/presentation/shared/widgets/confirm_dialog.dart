@@ -11,13 +11,20 @@ import 'banner_message.dart';
 /// chủ ý, không cần được làm cho hấp dẫn; nút giữ nguyên hiện trạng là nút được
 /// nhấn mạnh; và hệ quả của hành động phải nằm trong một banner có icon chứ
 /// không phải một câu chữ thường.
+///
+/// [cancelLabel] mặc định là "Cancel" chứ không phải một câu mô tả hậu quả của
+/// việc không làm gì. Nút thoát của một hộp thoại là thứ người dùng tìm bằng
+/// phản xạ; đặt cho nó một cái tên riêng ở mỗi màn buộc họ phải **đọc** mới
+/// biết nút nào là đường lùi. Điểm gọi nào có lý do thật sự thì vẫn ghi đè
+/// được — hộp thoại ghi đè khi khôi phục đang dùng "Keep it", vì ở đó hai nút
+/// là hai kết cục của dữ liệu chứ không phải làm-hay-không-làm.
 class ConfirmDialog extends StatelessWidget {
   const ConfirmDialog({
     required this.title,
     required this.confirmLabel,
     this.body,
     this.consequence,
-    this.cancelLabel = 'Keep it',
+    this.cancelLabel = 'Cancel',
     this.isBusy = false,
     this.canConfirm = true,
     this.extra,
@@ -131,7 +138,7 @@ class DestructiveButton extends StatelessWidget {
         color: onPressed == null ? colors.hairline : colors.moneyOut,
       ),
       textStyle: LedgerText.buttonSm,
-      shape: Corner.pillBorder,
+      shape: Corner.buttonBorder,
       padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
     );
 
@@ -158,7 +165,7 @@ Future<bool> showConfirmDialog(
   required String confirmLabel,
   String? body,
   FeedbackMessage? consequence,
-  String cancelLabel = 'Keep it',
+  String cancelLabel = 'Cancel',
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,

@@ -5,9 +5,12 @@ import '../../../app/theme.dart';
 import '../../shared/export/view_models/export_source.dart';
 import '../../shared/export/widgets/export_dialog.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/formatting/number_formatter.dart';
 import '../../shared/widgets/banner_message.dart';
 import '../../shared/widgets/confirm_dialog.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/notice_overlay.dart';
+import '../../shared/widgets/viewport_center.dart';
 import '../../shared/widgets/verdict_pill.dart';
 import '../../shell/bloc/app_shell_bloc.dart';
 import '../../shell/bloc/app_shell_event.dart';
@@ -55,9 +58,7 @@ class _ImportHistoryTabState extends State<ImportHistoryTab> {
             return;
           }
           if (state.notice case final notice?) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(notice.message.text)));
+            showNotice(context, notice.message);
           }
         },
         builder: (context, state) {
@@ -65,8 +66,7 @@ class _ImportHistoryTabState extends State<ImportHistoryTab> {
             return const Center(child: CircularProgressIndicator());
           }
           if (state.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(Gap.screen),
+            return const ViewportCenter(
               child: EmptyState(
                 title: 'No import runs yet',
                 message:
@@ -143,7 +143,8 @@ class _SessionCard extends StatelessWidget {
                       style: LedgerText.bodyMd.copyWith(color: colors.ink),
                     ),
                     Text(
-                      '${session.files.length} file · '
+                      '${NumberFormatter.countOf(session.files.length, 'file')}'
+                      ' · '
                       '${session.importedText} new · '
                       '${session.duplicateSkippedText} duplicate · '
                       '${session.errorRowText} errors',

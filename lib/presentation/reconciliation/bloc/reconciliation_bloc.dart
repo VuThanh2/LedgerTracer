@@ -20,6 +20,7 @@ import '../../shared/bloc/load_status.dart';
 import '../../shared/bloc/transient_notice.dart';
 import '../../shared/failures/failure_presenter.dart';
 import '../../shared/failures/feedback_message.dart';
+import '../../shared/formatting/number_formatter.dart';
 import '../../shared/queries/account_activity.dart';
 import '../view_models/pair_view_model.dart';
 import '../view_models/reconciliation_group.dart';
@@ -257,8 +258,7 @@ final class ReconciliationBloc
       emit(
         state.copyWith(
           notice: _notices.info(
-            'Reconciliation needs at least two accounts holding transactions '
-            'before there is anything to match.',
+            'Import statements for at least two accounts first.',
           ),
         ),
       );
@@ -389,7 +389,7 @@ final class ReconciliationBloc
             // quả lâu dài của một cú bấm trông như chỉ xoá một dòng (UC-09).
             status: LoadStatus.loading,
             notice: _notices.info(
-              'Rejection recorded. This pair will not be suggested again.',
+              'Pair rejected. It will not be suggested again.',
             ),
             undoableRejectionId: value.rejectedMatchId,
           ),
@@ -415,8 +415,7 @@ final class ReconciliationBloc
             // vừa "được khôi phục" mà không có ở đâu cả.
             status: LoadStatus.loading,
             notice: _notices.success(
-              'Rejection lifted. This pair becomes a candidate again on the '
-              'next scan.',
+              'Rejection undone. The pair can be suggested on the next scan.',
             ),
             clearUndoableRejection: true,
           ),
@@ -426,6 +425,13 @@ final class ReconciliationBloc
     }
   }
 
+  /// Đổi cửa sổ ghép cặp **không** phát thông báo khi thành công.
+  ///
+  /// Con số mới đã hiện ngay trên chính điều khiển vừa bấm, nên một câu báo chỉ
+  /// nói lại thứ người dùng đang nhìn. Nó còn có hại: chỉnh từ 1 lên 7 ngày là
+  /// sáu lần bấm, tức sáu thông báo xếp chồng ở mép trên màn hình — đúng chỗ
+  /// nút Chạy quét đứng. Thất bại thì vẫn báo, vì khi ấy con số trên điều khiển
+  /// không phản ánh thứ đã lưu.
   Future<void> _onMatchWindowChanged(
     ReconciliationMatchWindowChanged event,
     Emitter<ReconciliationState> emit,
@@ -435,15 +441,7 @@ final class ReconciliationBloc
       case Err<MatchWindow>(:final failure):
         emit(state.copyWith(notice: _noticeOf(failure, 'match window')));
       case Ok<MatchWindow>(:final value):
-        emit(
-          state.copyWith(
-            matchWindowDays: value.days,
-            notice: _notices.info(
-              'The new match window applies to the next scan only; confirmed '
-              'pairs are never touched.',
-            ),
-          ),
-        );
+        emit(state.copyWith(matchWindowDays: value.days));
     }
   }
 
@@ -617,18 +615,18 @@ final class ReconciliationBloc
   FeedbackMessage _runSummaryOf(RunReconciliationResult result) {
     if (result.wasCancelled) {
       return FeedbackMessage.info(
-        'Stopped midway after finding ${result.suggestedPairsFound} pairs. Run '
-        'the scan again to cover everything.',
+        'Scan stopped early — '
+        '${NumberFormatter.countOf(result.suggestedPairsFound, 'pair')} found.',
       );
     }
     if (result.suggestedPairsFound == 0) {
       return const FeedbackMessage.info(
-        'No internal transfer pairs found. Try widening the match window if '
-        'the two statements book the transfer on different days.',
+        'No internal transfers found. Try a wider match window.',
       );
     }
     return FeedbackMessage.success(
-      '${result.suggestedPairsFound} pairs are awaiting a decision.',
+      'Found ${NumberFormatter.countOf(result.suggestedPairsFound, 'possible '
+      'transfer')} to review.',
     );
   }
 

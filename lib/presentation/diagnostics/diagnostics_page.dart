@@ -4,11 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../app/dependencies.dart';
 import '../../app/theme.dart';
 import '../shared/failures/feedback_message.dart';
+import '../shared/widgets/pushed_page_scaffold.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/frame_pulse.dart';
 import 'bloc/diagnostics_bloc.dart';
 import 'bloc/diagnostics_event.dart';
 import 'bloc/diagnostics_state.dart';
+import 'view_models/probe_view_models.dart';
+import 'widgets/probe_result_tables.dart';
 import 'widgets/strategy_result_table.dart';
 import 'widgets/workload_controls.dart';
 
@@ -34,6 +37,7 @@ class DiagnosticsPage extends StatelessWidget {
     return BlocProvider<DiagnosticsBloc>(
       create: (_) => DiagnosticsBloc(
         runBenchmark: dependencies.runBenchmark,
+        probeRuntime: dependencies.probeRuntime,
         capabilities: dependencies.capabilities,
       )..add(const DiagnosticsStarted()),
       child: Theme(
@@ -50,25 +54,23 @@ class _DiagnosticsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Developer diagnostics'),
-        actions: <Widget>[
-          BlocBuilder<DiagnosticsBloc, DiagnosticsState>(
-            buildWhen: (previous, current) =>
-                previous.hasResults != current.hasResults ||
-                previous.isRunning != current.isRunning,
-            builder: (context, state) => TextButton(
-              onPressed: state.hasResults && !state.isRunning
-                  ? () => context.read<DiagnosticsBloc>().add(
-                      const DiagnosticsCleared(),
-                    )
-                  : null,
-              child: const Text('Clear results'),
-            ),
+    return PushedPageScaffold(
+      title: 'Developer diagnostics',
+      actions: <Widget>[
+        BlocBuilder<DiagnosticsBloc, DiagnosticsState>(
+          buildWhen: (previous, current) =>
+              previous.hasResults != current.hasResults ||
+              previous.isRunning != current.isRunning,
+          builder: (context, state) => TextButton(
+            onPressed: state.hasResults && !state.isRunning
+                ? () => context.read<DiagnosticsBloc>().add(
+                    const DiagnosticsCleared(),
+                  )
+                : null,
+            child: const Text('Clear results'),
           ),
-        ],
-      ),
+        ),
+      ],
       body: BlocBuilder<DiagnosticsBloc, DiagnosticsState>(
         builder: (context, state) {
           final bloc = context.read<DiagnosticsBloc>();
@@ -84,6 +86,15 @@ class _DiagnosticsView extends StatelessWidget {
                 onSampleSizeSelected: (size) =>
                     bloc.add(DiagnosticsSampleSizeChanged(size)),
                 onRun: () => bloc.add(const DiagnosticsRunRequested()),
+                onTestSelected: (test) =>
+                    bloc.add(DiagnosticsTestSelected(test)),
+                onRepeatsSelected: (count) =>
+                    bloc.add(DiagnosticsRepeatsChanged(count)),
+              ),
+              const SizedBox(height: Gap.md),
+              Text(
+                state.test.explanation,
+                style: LedgerText.bodySm.copyWith(color: colors.darkInkMute),
               ),
               const SizedBox(height: Gap.lg),
 
@@ -98,11 +109,26 @@ class _DiagnosticsView extends StatelessWidget {
               Text(
                 'MACHINE: ${state.processorCount} cores · '
                 '${state.supportsIsolates ? 'isolates available' : 'no isolates'}',
-                style: LedgerText.microCap.copyWith(color: colors.darkInkMute),
+                style: LedgerText.microCap.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.6,
+                  color: colors.darkInkMute,
+                ),
               ),
               const SizedBox(height: Gap.md),
 
-              StrategyResultTable(runs: state.runs),
+              switch (state.test) {
+                DiagnosticsTest.throughput => StrategyResultTable(
+                  runs: state.runs,
+                ),
+                DiagnosticsTest.cancellation => CancelProbeTable(
+                  runs: state.cancelRuns,
+                ),
+                DiagnosticsTest.backpressure => BackpressureProbeTable(
+                  runs: state.backpressureRuns,
+                ),
+              },
               const SizedBox(height: Gap.xxl),
             ],
           );
@@ -154,9 +180,9 @@ class _RunProgress extends StatelessWidget {
                       '${state.strategyCount} · ${state.sampleSize} items · '
                       'batch ${state.batchSize}'
                 : 'Idle.',
-            style: LedgerText.monoLog.copyWith(color: colors.darkInkMute),
+            style: LedgerText.monoLog.copyWith(color: colors.darkInk),
           ),
-          const SizedBox(height: Gap.xs),
+          const SizedBox(height: Gap.sm),
           Text(
             'The pulse runs off the frame ticker. It stalls exactly when the '
             'workload holds the interface thread — which is what the p95 figure '

@@ -63,9 +63,9 @@ class DeleteTransactionDialog extends StatelessWidget {
   static FeedbackMessage? _consequenceOf(DeleteConfirmation pending) =>
       pending.cancelsReconciliation
       ? const FeedbackMessage.danger(
-          'This row belongs to a reconciliation pair. The pair will be dropped, '
-          'and because that is not recorded as a rejection, the next scan can '
-          'suggest a similar pair again.',
+          'This transaction is part of an internal-transfer pair. Deleting it '
+          'removes the pair, and a later scan may suggest a similar pair '
+          'again.',
         )
       : null;
 }

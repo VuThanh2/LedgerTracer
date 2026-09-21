@@ -1,10 +1,10 @@
 /// Mức độ của một phản hồi hệ thống, ánh xạ thẳng sang bốn kiểu banner của hệ
 /// thiết kế (warning / danger / info / success).
 ///
-/// Là một kênh ngữ nghĩa riêng: banner luôn full-width, luôn có icon, viền trái
-/// 3px — khác hẳn pill trạng thái (có nền, không icon) và khác hẳn màu chữ chỉ
-/// chiều tiền. Ba kênh tách nhau bằng **hình dạng**, không bằng hue, nên chỗ
-/// duy nhất được chọn giữa chúng là kiểu dữ liệu, không phải màu.
+/// Là một kênh ngữ nghĩa riêng: banner luôn full-width và **luôn có icon** —
+/// khác hẳn pill trạng thái (có nền, không icon) và khác hẳn màu chữ chỉ chiều
+/// tiền. Ba kênh tách nhau bằng **hình dạng**, không bằng hue, nên chỗ duy nhất
+/// được chọn giữa chúng là kiểu dữ liệu, không phải màu.
 enum FeedbackSeverity {
   /// Thông tin thuần: giới hạn nền tảng, ghi chú về dữ liệu.
   info,

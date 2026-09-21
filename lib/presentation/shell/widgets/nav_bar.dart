@@ -72,14 +72,20 @@ class _BarTile extends StatelessWidget {
       button: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: Corner.pill,
-        child: Container(
+        // Bo vừa phải thay vì pill: ô rộng cả phần tư màn hình mà bo tròn hết
+        // thì thành một viên thuốc to, trông nặng hơn nội dung bên trong.
+        borderRadius: Corner.radiusLg,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
           // Vùng chạm tối thiểu 48px của breakpoint Compact.
           constraints: const BoxConstraints(minHeight: 48),
           margin: const EdgeInsets.symmetric(horizontal: Gap.xs),
           decoration: BoxDecoration(
-            color: selected ? colors.primaryWash : Colors.transparent,
-            borderRadius: Corner.pill,
+            color: selected
+                ? colors.primaryWash
+                : colors.primaryWash.withValues(alpha: 0),
+            borderRadius: Corner.radiusLg,
           ),
           child: Column(
             // `bottomNavigationBar` được Scaffold đo bằng ràng buộc **lỏng**,
@@ -94,7 +100,11 @@ class _BarTile extends StatelessWidget {
                 label.toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: LedgerText.microCap.copyWith(color: foreground),
+                style: LedgerText.microCap.copyWith(
+                  // Nhỏ hơn microCap 1px để nhãn không lấn icon.
+                  fontSize: 10,
+                  color: foreground,
+                ),
               ),
             ],
           ),

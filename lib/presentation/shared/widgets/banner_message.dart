@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 import '../failures/feedback_message.dart';
+import '../failures/severity_style.dart';
 
-/// Banner phản hồi hệ thống: full-width, viền trái 3px, **luôn có icon**.
+/// Banner phản hồi hệ thống: full-width, nền một màu, **luôn có icon**.
 ///
 /// Icon là thứ tách banner khỏi [VerdictPill] ở tầng nhận biết: pill nói "dòng
 /// này đang ở trạng thái nào", banner nói "hệ thống vừa gặp chuyện gì". Hai kênh
 /// dùng chung vài hue nên chúng phải khác nhau ở hình dạng.
+///
+/// Bản đầu có thêm một vệt đậm 3px ở mép trái. Đã bỏ: trong một panel hẹp, vệt
+/// đó đọc ra như thể khối bị cắt đôi — một dải đậm rồi mới tới phần nền — thay
+/// vì như một khối liền. Icon vẫn ở nguyên đó, nên thứ thực sự phân biệt kênh
+/// này không mất đi cùng với vệt màu.
 class BannerMessage extends StatelessWidget {
   const BannerMessage(this.message, {this.onDismiss, this.action, super.key});
 
@@ -23,28 +29,10 @@ class BannerMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
-    final (background, foreground, icon) = switch (message.severity) {
-      FeedbackSeverity.info => (
-        colors.primaryWash,
-        colors.primaryDeep,
-        Icons.info_outline,
-      ),
-      FeedbackSeverity.success => (
-        colors.moneyInSoft,
-        colors.moneyIn,
-        Icons.check_circle_outline,
-      ),
-      FeedbackSeverity.warning => (
-        colors.creamWash,
-        colors.lemonInk,
-        Icons.warning_amber_outlined,
-      ),
-      FeedbackSeverity.danger => (
-        colors.rubyWash,
-        colors.moneyOut,
-        Icons.error_outline,
-      ),
-    };
+    final (:background, :foreground, :icon) = severityStyleOf(
+      message.severity,
+      colors,
+    );
 
     return Container(
       width: double.infinity,
@@ -52,7 +40,6 @@ class BannerMessage extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: Corner.radiusMd,
-        border: Border(left: BorderSide(color: foreground, width: 3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

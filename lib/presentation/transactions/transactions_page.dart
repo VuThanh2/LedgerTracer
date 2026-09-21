@@ -7,6 +7,7 @@ import '../shared/formatting/number_formatter.dart';
 import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
 import '../shared/widgets/filter_chip_bar.dart';
+import '../shared/widgets/notice_overlay.dart';
 import '../shell/bloc/app_shell_bloc.dart';
 import '../shell/bloc/app_shell_event.dart';
 import '../shell/view_models/navigation_intent.dart';
@@ -18,6 +19,7 @@ import 'transaction_edit_page.dart';
 import 'view_models/filter_chip_view_model.dart';
 import 'view_models/transaction_row_view_model.dart';
 import 'widgets/delete_transaction_dialog.dart';
+import 'widgets/export_transactions_button.dart';
 import 'widgets/filter_panel.dart';
 import 'widgets/transaction_detail_pane.dart';
 import 'widgets/transaction_list_view.dart';
@@ -95,8 +97,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   Future<void> _openEditor(BuildContext context, int transactionId) async {
     final bloc = context.read<TransactionsBloc>();
-    final saved = await Navigator.of(context)
-        .push(TransactionEditPage.route(context, transactionId));
+    final saved = await TransactionEditPage.open(context, transactionId);
     if (saved ?? false) {
       bloc.add(TransactionsInvalidated(changedTransactionId: transactionId));
     }
@@ -122,9 +123,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
           return;
         }
         if (state.notice case final notice?) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(notice.message.text)));
+          showNotice(context, notice.message);
         }
       },
       builder: (context, state) {
@@ -266,6 +265,7 @@ class _SearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
+    final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: Gap.screen,
@@ -291,6 +291,13 @@ class _SearchHeader extends StatelessWidget {
                 active: filterOpen || !state.filter.isEmpty,
                 onPressed: onToggleFilter,
               ),
+              // Xuất dữ liệu đứng cạnh bộ lọc vì nó xuất **đúng tập đang lọc**:
+              // nút tạo ra tập và nút mang tập đó đi phải nhìn thấy nhau. Ở bản
+              // hẹp nó vẫn ở app bar — hàng này không còn chỗ cho nút thứ ba.
+              if (!sizeClass.usesBottomNavigation) ...<Widget>[
+                const SizedBox(width: Gap.sm),
+                const ExportTransactionsButton(iconOnly: false),
+              ],
             ],
           ),
           const SizedBox(height: Gap.sm),
@@ -328,6 +335,11 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
+    final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
+    // Bản hẹp giữ nguyên cỡ cũ; chỉ bản rộng lớn lên để khớp chiều cao với ô
+    // tìm kiếm bên cạnh.
+    final compact = sizeClass.usesBottomNavigation;
+
     return OutlinedButton.icon(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -336,12 +348,12 @@ class _FilterButton extends StatelessWidget {
         side: BorderSide(
           color: active ? colors.primary : colors.hairlineControl,
         ),
-        textStyle: LedgerText.micro,
-        shape: Corner.pillBorder,
+        textStyle: compact ? LedgerText.micro : LedgerText.bodySm,
+        shape: Corner.buttonBorder,
         padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-        minimumSize: const Size(0, 40),
+        minimumSize: Size(0, compact ? 40 : sizeClass.controlHeight),
       ),
-      icon: const Icon(Icons.tune, size: 14),
+      icon: Icon(Icons.tune, size: compact ? 14 : 16),
       label: const Text('Filters'),
     );
   }

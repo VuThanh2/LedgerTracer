@@ -370,9 +370,15 @@ final class SqliteTransactionRepository implements TransactionRepository {
       );
     }
 
-    final accountId = filter.accountId;
-    if (accountId != null) {
-      conditions.add('account_id = ?', <Object?>[accountId]);
+    final accountIds = filter.accountIds;
+    if (accountIds.isNotEmpty) {
+      // Một dấu `?` cho mỗi tài khoản; số tài khoản là số người dùng tích tay
+      // nên luôn nằm xa dưới giới hạn tham số của SQLite.
+      final placeholders = List<String>.filled(
+        accountIds.length,
+        '?',
+      ).join(', ');
+      conditions.add('account_id IN ($placeholders)', accountIds.toList());
     }
 
     final dateRange = filter.dateRange;

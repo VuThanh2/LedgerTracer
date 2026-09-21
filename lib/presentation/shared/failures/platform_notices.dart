@@ -26,9 +26,9 @@ abstract final class PlatformNotices {
   /// điều kiện làm giao diện giật ngay trước mắt người dùng, không phải một ghi
   /// chú trung tính.
   static const FeedbackMessage webDegradation = FeedbackMessage.warning(
-    'Running on the web build. No isolates: heavy parsing shares the interface '
-    'thread, so the interface may stutter. No file-level parallelism either, '
-    'so the whole run takes longer than on the installed app.',
+    'You are using the web version. Large files are processed on the same '
+    'thread that draws the screen, so the app may pause briefly, and imports '
+    'take longer than in the Android app.',
   );
 
   /// Kèm ở mọi luồng xuất báo cáo (UC-11).

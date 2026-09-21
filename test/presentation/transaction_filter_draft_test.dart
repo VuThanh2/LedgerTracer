@@ -148,11 +148,10 @@ void main() {
     });
 
     test('từ khoá đi cùng các tiêu chí khác', () {
-      final result = const TransactionFilterDraft(accountId: 7).validate(
-        keyword: SearchText.query('Nguyễn'),
-      );
+      final result = const TransactionFilterDraft(accountIds: <int>{7})
+          .validate(keyword: SearchText.query('Nguyễn'));
       expect(result.filter!.keyword, isNotNull);
-      expect(result.filter!.accountId, 7);
+      expect(result.filter!.accountIds, <int>{7});
     });
   });
 
@@ -172,9 +171,9 @@ void main() {
     });
 
     test('phân biệt "giữ nguyên" với "xoá"', () {
-      const draft = TransactionFilterDraft(accountId: 3);
-      expect(draft.copyWith().accountId, 3);
-      expect(draft.copyWith(clearAccount: true).accountId, isNull);
+      const draft = TransactionFilterDraft(accountIds: <int>{3});
+      expect(draft.copyWith().accountIds, <int>{3});
+      expect(draft.copyWith(clearAccount: true).accountIds, isEmpty);
     });
   });
 }

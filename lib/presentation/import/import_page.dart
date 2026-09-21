@@ -6,8 +6,11 @@ import '../accounts/widgets/account_form_dialog.dart';
 import '../shared/export/view_models/export_source.dart';
 import '../shared/export/widgets/export_dialog.dart';
 import '../shared/failures/feedback_message.dart';
+import '../shared/formatting/number_formatter.dart';
 import '../shared/responsive/breakpoints.dart';
 import '../shared/widgets/banner_message.dart';
+import '../shared/widgets/notice_overlay.dart';
+import '../shared/widgets/viewport_center.dart';
 import '../shared/widgets/confirm_dialog.dart';
 import '../shell/bloc/app_shell_bloc.dart';
 import '../shell/bloc/app_shell_event.dart';
@@ -138,9 +141,7 @@ class _NewImportTab extends StatelessWidget {
       listenWhen: (previous, current) => previous.notice != current.notice,
       listener: (context, state) {
         if (state.notice case final notice?) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(notice.message.text)));
+          showNotice(context, notice.message);
         }
       },
       builder: (context, state) {
@@ -150,100 +151,100 @@ class _NewImportTab extends StatelessWidget {
             ImportStepper(
               step: state.step,
               showLabels: !sizeClass.usesBottomNavigation,
+              canJumpTo: state.canJumpTo,
+              onStepSelected: (step) => bloc.add(ImportStepSelected(step)),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(Gap.screen),
-                children: <Widget>[
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 840),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Text(
-                            'Step ${state.step.index + 1} of 4',
-                            style: LedgerText.microCap.copyWith(
-                              color: context.ledger.inkSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: Gap.xs),
-                          Text(
-                            ImportStepper.titleOf(state.step),
-                            style: LedgerText.displayMd.copyWith(
-                              color: context.ledger.ink,
-                            ),
-                          ),
-                          const SizedBox(height: Gap.xs),
-                          Text(
-                            ImportStepper.subtitleOf(state.step),
-                            style: LedgerText.caption.copyWith(
-                              color: context.ledger.inkMute,
-                            ),
-                          ),
-                          const SizedBox(height: Gap.xl),
-
-                          if (state.error case final FeedbackMessage error) ...[
-                            BannerMessage(error),
-                            const SizedBox(height: Gap.lg),
-                          ],
-
-                          switch (state.step) {
-                            ImportStep.pickFiles => StepPickFiles(
-                              state: state,
-                              onPick: () =>
-                                  bloc.add(const ImportFilesPickRequested()),
-                              onRemove: (fileName) =>
-                                  bloc.add(ImportFileRemoved(fileName)),
-                            ),
-                            ImportStep.assignAccounts => StepAssignAccounts(
-                              state: state,
-                              onAssign: (fileName, accountId) => bloc.add(
-                                ImportFileAccountAssigned(
-                                  fileName: fileName,
-                                  accountId: accountId,
-                                ),
-                              ),
-                              onImportAnyway: (fileName) => bloc.add(
-                                ImportMismatchResolved(
-                                  fileName: fileName,
-                                  decision: MismatchDecision.importAnyway,
-                                ),
-                              ),
-                              onSkipFile: (fileName) => bloc.add(
-                                ImportMismatchResolved(
-                                  fileName: fileName,
-                                  decision: MismatchDecision.skipFile,
-                                ),
-                              ),
-                              onCreateAccount: (fileName) =>
-                                  onCreateAccount(context, fileName),
-                            ),
-                            ImportStep.running => StepProgress(state: state),
-                            ImportStep.summary => StepSummary(
-                              state: state,
-                              onExportErrors: (recordId, fileName) =>
-                                  ExportDialog.open(
-                                    context,
-                                    ExportErrorRowsSource(
-                                      importFileRecordId: recordId,
-                                      fileName: fileName,
-                                    ),
-                                  ),
-                              onGoToReconciliation: () =>
-                                  context.read<AppShellBloc>().add(
-                                    const AppShellNavigationRequested(
-                                      OpenReconciliation(),
-                                    ),
-                                  ),
-                            ),
-                          },
-                          const SizedBox(height: Gap.xl),
-                        ],
+              child: ViewportCenter(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Gap.screen,
+                  vertical: Gap.xl,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 840),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Text(
+                        'Step ${state.step.index + 1} of 4',
+                        style: LedgerText.microCap.copyWith(
+                          color: context.ledger.inkSecondary,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: Gap.xs),
+                      Text(
+                        ImportStepper.titleOf(state.step),
+                        style: LedgerText.displayMd.copyWith(
+                          color: context.ledger.ink,
+                        ),
+                      ),
+                      const SizedBox(height: Gap.xs),
+                      Text(
+                        ImportStepper.subtitleOf(state.step),
+                        style: LedgerText.caption.copyWith(
+                          color: context.ledger.inkMute,
+                        ),
+                      ),
+                      const SizedBox(height: Gap.xl),
+
+                      if (state.error case final FeedbackMessage error) ...[
+                        BannerMessage(error),
+                        const SizedBox(height: Gap.lg),
+                      ],
+
+                      switch (state.step) {
+                        ImportStep.pickFiles => StepPickFiles(
+                          state: state,
+                          onPick: () =>
+                              bloc.add(const ImportFilesPickRequested()),
+                          onRemove: (fileName) =>
+                              bloc.add(ImportFileRemoved(fileName)),
+                        ),
+                        ImportStep.assignAccounts => StepAssignAccounts(
+                          state: state,
+                          onAssign: (fileName, accountId) => bloc.add(
+                            ImportFileAccountAssigned(
+                              fileName: fileName,
+                              accountId: accountId,
+                            ),
+                          ),
+                          onImportAnyway: (fileName) => bloc.add(
+                            ImportMismatchResolved(
+                              fileName: fileName,
+                              decision: MismatchDecision.importAnyway,
+                            ),
+                          ),
+                          onSkipFile: (fileName) => bloc.add(
+                            ImportMismatchResolved(
+                              fileName: fileName,
+                              decision: MismatchDecision.skipFile,
+                            ),
+                          ),
+                          onCreateAccount: (fileName) =>
+                              onCreateAccount(context, fileName),
+                        ),
+                        ImportStep.running => StepProgress(state: state),
+                        ImportStep.summary => StepSummary(
+                          state: state,
+                          onExportErrors: (recordId, fileName) =>
+                              ExportDialog.open(
+                                context,
+                                ExportErrorRowsSource(
+                                  importFileRecordId: recordId,
+                                  fileName: fileName,
+                                ),
+                              ),
+                          onGoToReconciliation: () =>
+                              context.read<AppShellBloc>().add(
+                                const AppShellNavigationRequested(
+                                  OpenReconciliation(),
+                                ),
+                              ),
+                        ),
+                      },
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
             _StepperFooter(state: state),
@@ -269,30 +270,112 @@ class _StepperFooter extends StatelessWidget {
     final colors = context.ledger;
     final bloc = context.read<ImportBloc>();
     final blockedReason = _blockedReasonOf(state);
+    final compact = WindowSizeClass.of(MediaQuery.sizeOf(context).width)
+        .usesBottomNavigation;
+
+    // Bản mobile: nút gọn hơn (chữ 14, cao 40) để không chiếm nửa bề ngang.
+    final ButtonStyle? buttonStyle = compact
+        ? const ButtonStyle(
+            textStyle: WidgetStatePropertyAll<TextStyle>(LedgerText.buttonSm),
+            padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+              EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
+            ),
+            minimumSize: WidgetStatePropertyAll<Size>(Size(0, 40)),
+            visualDensity: VisualDensity.compact,
+          )
+        : null;
+
+    final primary = switch (state.step) {
+      ImportStep.pickFiles => FilledButton(
+        style: buttonStyle,
+        onPressed: state.canAssignAccounts
+            ? () => bloc.add(const ImportStepAdvanced())
+            : null,
+        child: const Text('Assign accounts'),
+      ),
+      ImportStep.assignAccounts => FilledButton(
+        style: buttonStyle,
+        onPressed: state.canRun
+            ? () => bloc.add(const ImportRunRequested())
+            : null,
+        child: const Text('Start import'),
+      ),
+      ImportStep.running => const SizedBox.shrink(),
+      ImportStep.summary => FilledButton(
+        style: buttonStyle,
+        onPressed: () => bloc.add(const ImportReset()),
+        child: const Text('Import more files'),
+      ),
+    };
+
+    final leading = <Widget>[
+      if (state.step.canGoBack)
+        OutlinedButton(
+          style: buttonStyle,
+          onPressed: () => bloc.add(const ImportStepReverted()),
+          child: const Text('Back'),
+        ),
+      if (state.isRunning)
+        DestructiveButton(
+          label: state.isCancelling ? 'Cancelling…' : 'Cancel',
+          onPressed: state.isCancelling
+              ? null
+              : () => bloc.add(const ImportRunCancelled()),
+        ),
+    ];
+
+    final decoration = BoxDecoration(
+      color: colors.canvas,
+      border: Border(top: BorderSide(color: colors.hairline)),
+    );
+
+    // Bản mobile: lý do khoá nằm thành một dòng riêng phía trên hàng nút, căn
+    // trái như mọi chữ khác trên màn, thay vì bị ép vào nửa phải cạnh nút.
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(
+          Gap.screen,
+          Gap.sm,
+          Gap.screen,
+          Gap.sm,
+        ),
+        decoration: decoration,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (blockedReason != null) ...<Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(Icons.info_outline, size: 14, color: colors.lemonInk),
+                  const SizedBox(width: Gap.xs),
+                  Expanded(
+                    child: Text(
+                      blockedReason,
+                      style: LedgerText.caption.copyWith(
+                        color: colors.lemonInk,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Gap.sm),
+            ],
+            Row(children: <Widget>[...leading, const Spacer(), primary]),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: Gap.screen,
         vertical: Gap.md,
       ),
-      decoration: BoxDecoration(
-        color: colors.canvas,
-        border: Border(top: BorderSide(color: colors.hairline)),
-      ),
+      decoration: decoration,
       child: Row(
         children: <Widget>[
-          if (state.step.canGoBack)
-            OutlinedButton(
-              onPressed: () => bloc.add(const ImportStepReverted()),
-              child: const Text('Back'),
-            ),
-          if (state.isRunning)
-            DestructiveButton(
-              label: state.isCancelling ? 'Cancelling…' : 'Cancel',
-              onPressed: state.isCancelling
-                  ? null
-                  : () => bloc.add(const ImportRunCancelled()),
-            ),
+          ...leading,
           const Spacer(),
           if (blockedReason != null)
             Flexible(
@@ -305,25 +388,7 @@ class _StepperFooter extends StatelessWidget {
                 ),
               ),
             ),
-          switch (state.step) {
-            ImportStep.pickFiles => FilledButton(
-              onPressed: state.canAssignAccounts
-                  ? () => bloc.add(const ImportStepAdvanced())
-                  : null,
-              child: const Text('Assign accounts'),
-            ),
-            ImportStep.assignAccounts => FilledButton(
-              onPressed: state.canRun
-                  ? () => bloc.add(const ImportRunRequested())
-                  : null,
-              child: const Text('Start import'),
-            ),
-            ImportStep.running => const SizedBox.shrink(),
-            ImportStep.summary => FilledButton(
-              onPressed: () => bloc.add(const ImportReset()),
-              child: const Text('Import more files'),
-            ),
-          },
+          primary,
         ],
       ),
     );
@@ -333,10 +398,11 @@ class _StepperFooter extends StatelessWidget {
     ImportStep.pickFiles when !state.canAssignAccounts =>
       'No readable file yet.',
     ImportStep.assignAccounts when state.unassignedCount > 0 =>
-      '${state.unassignedCount} files still need a destination account.',
+      '${NumberFormatter.countOf(state.unassignedCount, 'file')} still '
+          'need an account.',
     ImportStep.assignAccounts when state.unresolvedMismatchCount > 0 =>
-      '${state.unresolvedMismatchCount} account-number warnings are still '
-          'unresolved.',
+      '${NumberFormatter.countOf(state.unresolvedMismatchCount, 'file')} '
+          'still have an account-number warning to answer.',
     _ => null,
   };
 }

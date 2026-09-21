@@ -16,6 +16,7 @@ class SectionCard extends StatelessWidget {
     this.trailing,
     this.padding,
     this.background,
+    this.fill = false,
     super.key,
   });
 
@@ -34,6 +35,11 @@ class SectionCard extends StatelessWidget {
 
   final Color? background;
 
+  /// Cho [child] chiếm hết chiều cao còn lại khi card bị kéo cao hơn nội dung
+  /// — dùng khi hai card đứng cạnh nhau phải cao bằng nhau. Chỉ bật khi card
+  /// nhận chiều cao hữu hạn (ví dụ trong `IntrinsicHeight`).
+  final bool fill;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.ledger;
@@ -49,7 +55,7 @@ class SectionCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
         children: <Widget>[
           if (title != null) ...<Widget>[
             Row(
@@ -72,7 +78,7 @@ class SectionCard extends StatelessWidget {
             ],
             const SizedBox(height: Gap.lg),
           ],
-          child,
+          if (fill) Expanded(child: child) else child,
         ],
       ),
     );

@@ -23,6 +23,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     required this.brandDark,
     required this.darkSurface,
     required this.darkHairline,
+    required this.darkInk,
     required this.darkInkMute,
     required this.ink,
     required this.inkSecondary,
@@ -57,8 +58,9 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     primaryWash: Color(0xFFEEECFF),
     brandDark: Color(0xFF1C1E54),
     darkSurface: Color(0xFF262A63),
-    darkHairline: Color(0xFF33377A),
-    darkInkMute: Color(0xFF8E96C4),
+    darkHairline: Color(0xFF3C41A0),
+    darkInk: Color(0xFFE7E9F8),
+    darkInkMute: Color(0xFFA9B0DE),
     ink: Color(0xFF0D253D),
     inkSecondary: Color(0xFF273951),
     inkMute: Color(0xFF64748D),
@@ -92,6 +94,15 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
   final Color brandDark;
   final Color darkSurface;
   final Color darkHairline;
+
+  /// Mực chính trên nền tối — nhãn, số đo, dòng trạng thái.
+  ///
+  /// Bảng tối chỉ có một bậc mực cho tới khi token này ra đời, nên mọi chữ ở màn
+  /// Diagnostics đều nằm ở bậc "mờ": không có gì nổi lên thì cũng không có gì
+  /// lùi xuống, và cả màn hình đọc như chú thích. Hai bậc [darkInk] /
+  /// [darkInkMute] là để phân tầng đó tồn tại.
+  final Color darkInk;
+
   final Color darkInkMute;
 
   final Color ink;
@@ -150,6 +161,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     Color? brandDark,
     Color? darkSurface,
     Color? darkHairline,
+    Color? darkInk,
     Color? darkInkMute,
     Color? ink,
     Color? inkSecondary,
@@ -182,6 +194,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
     brandDark: brandDark ?? this.brandDark,
     darkSurface: darkSurface ?? this.darkSurface,
     darkHairline: darkHairline ?? this.darkHairline,
+    darkInk: darkInk ?? this.darkInk,
     darkInkMute: darkInkMute ?? this.darkInkMute,
     ink: ink ?? this.ink,
     inkSecondary: inkSecondary ?? this.inkSecondary,
@@ -220,6 +233,7 @@ final class LedgerColors extends ThemeExtension<LedgerColors> {
       brandDark: mix(brandDark, other.brandDark),
       darkSurface: mix(darkSurface, other.darkSurface),
       darkHairline: mix(darkHairline, other.darkHairline),
+      darkInk: mix(darkInk, other.darkInk),
       darkInkMute: mix(darkInkMute, other.darkInkMute),
       ink: mix(ink, other.ink),
       inkSecondary: mix(inkSecondary, other.inkSecondary),
@@ -261,8 +275,19 @@ abstract final class Gap {
   static const double screen = 16;
 }
 
-/// Thang bo góc. `pill` là hình của mọi nút — DESIGN.md cấm thay nó bằng hình
-/// chữ nhật bo góc.
+/// Thang bo góc.
+///
+/// `pill` từng là hình của **mọi** nút, và DESIGN.md (bản 2026-09-20 trở về
+/// trước) cấm thay nó bằng hình chữ nhật bo góc. Quy tắc đó đã được chủ sản
+/// phẩm đổi: nút giờ là [buttonBorder] — chữ nhật bo `lg` (12px). Ở chiều cao
+/// nút 40–48dp, 12px cho tỉ lệ bo ≈ 0.27 chiều cao, tức vẫn rõ ràng là một nút
+/// bo tròn chứ không phải một hộp vuông.
+///
+/// `pill` **không** biến mất, và đây là ranh giới phải giữ: nó vẫn là hình của
+/// pill trạng thái, badge, chip và thanh tiến trình. Hình dạng là một kênh ngữ
+/// nghĩa của hệ thống này — người dùng phân biệt "thứ bấm được" với "nhãn của
+/// một dòng" bằng hình trước khi đọc chữ. Cho cả hai cùng một hình là xoá kênh
+/// đó.
 abstract final class Corner {
   static const Radius xs = Radius.circular(4);
   static const Radius sm = Radius.circular(6);
@@ -277,8 +302,13 @@ abstract final class Corner {
   static const BorderRadius radiusXl = BorderRadius.all(xl);
   static const BorderRadius pill = BorderRadius.all(Radius.circular(9999));
 
-  static const RoundedRectangleBorder pillBorder = RoundedRectangleBorder(
-    borderRadius: pill,
+  /// Hình của mọi nút — filled, outlined, text, và các nút tự dựng style riêng.
+  ///
+  /// Khai báo ở đây chứ không rải `radiusLg` vào từng chỗ: hình nút là **một**
+  /// quyết định, và một hằng số chung là thứ giữ cho lần đổi sau không bỏ sót
+  /// một nút nào.
+  static const RoundedRectangleBorder buttonBorder = RoundedRectangleBorder(
+    borderRadius: radiusLg,
   );
 }
 
@@ -307,6 +337,27 @@ abstract final class Elevations {
       blurRadius: 6,
     ),
   ];
+}
+
+/// Thời lượng chuyển động khi đổi trạng thái — không phải animation trang trí.
+///
+/// Chỉ dùng cho chuyển cảnh chức năng: cho mắt theo kịp một thay đổi vừa bấm
+/// (ô segmented đổi chỗ, cột biểu đồ đổi giá trị). Ngắn, không lặp, và tắt hẳn
+/// khi hệ điều hành bật giảm chuyển động.
+abstract final class Motion {
+  /// Đổi trạng thái của một control nhỏ.
+  static const Duration short = Duration(milliseconds: 200);
+
+  /// Dữ liệu biểu đồ đổi giá trị.
+  static const Duration medium = Duration(milliseconds: 280);
+
+  static const Curve curve = Curves.easeOutCubic;
+
+  /// [duration], hoặc 0 khi người dùng đã bật giảm chuyển động.
+  static Duration of(BuildContext context, Duration duration) =>
+      (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
+      ? Duration.zero
+      : duration;
 }
 
 /// Thang chữ của DESIGN.md, dựng thành [TextStyle] dùng trực tiếp.
@@ -502,10 +553,13 @@ abstract final class LedgerText {
     fontFeatures: <FontFeature>[ss01],
   );
 
+  /// Dòng log ở màn Diagnostics. Cỡ 13 chứ không 12: nó là **nội dung** của màn
+  /// đó — số đo và trạng thái lượt chạy — chứ không phải chú thích của một khối
+  /// khác, và ở 12px trên nền tối nó đọc như thứ đã bị làm mờ có chủ ý.
   static const TextStyle monoLog = TextStyle(
     fontFamily: 'JetBrains Mono',
     fontFamilyFallback: <String>['Consolas', 'Menlo', 'monospace'],
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
     height: 1.55,
     fontFeatures: <FontFeature>[FontFeature.slashedZero()],
@@ -514,7 +568,7 @@ abstract final class LedgerText {
 
 /// Dựng [ThemeData] từ các token bên trên.
 abstract final class LedgerTheme {
-  static ThemeData light({bool compactDensity = false}) {
+  static ThemeData light() {
     const colors = LedgerColors.light;
     final scheme = ColorScheme.fromSeed(seedColor: colors.primary).copyWith(
       primary: colors.primary,
@@ -536,11 +590,11 @@ abstract final class LedgerTheme {
       fontFamily: LedgerText.family,
       fontFamilyFallback: LedgerText.familyFallback,
 
-      // Density theo **tác vụ**, không theo kích thước màn: web là nơi nhập
-      // hàng loạt và so sánh nên cần nhiều dòng cùng lúc.
-      visualDensity: compactDensity
-          ? VisualDensity.compact
-          : VisualDensity.standard,
+      // Một mật độ duy nhất cho mọi bề rộng. Bản rộng từng chạy
+      // `VisualDensity.compact` để xem được nhiều dòng hơn, nhưng nó bóp mọi
+      // control đi 8px trên cả hai trục và bản Web trở nên khó bấm; đổi lấy vài
+      // dòng hiển thị thêm là một món hời tồi.
+      visualDensity: VisualDensity.standard,
 
       textTheme: _textTheme(colors),
       appBarTheme: AppBarTheme(
@@ -588,14 +642,6 @@ abstract final class LedgerTheme {
           borderRadius: BorderRadius.vertical(top: Corner.xl),
         ),
       ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: colors.ink,
-        contentTextStyle: LedgerText.bodySm.copyWith(color: colors.onPrimary),
-        actionTextColor: colors.primarySubdued,
-        behavior: SnackBarBehavior.floating,
-        elevation: 1,
-        shape: const RoundedRectangleBorder(borderRadius: Corner.radiusMd),
-      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colors.canvas,
@@ -634,7 +680,7 @@ abstract final class LedgerTheme {
             EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           ),
           shape: const WidgetStatePropertyAll<OutlinedBorder>(
-            Corner.pillBorder,
+            Corner.buttonBorder,
           ),
           elevation: const WidgetStatePropertyAll<double>(0),
         ),
@@ -653,7 +699,7 @@ abstract final class LedgerTheme {
             EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           ),
           shape: const WidgetStatePropertyAll<OutlinedBorder>(
-            Corner.pillBorder,
+            Corner.buttonBorder,
           ),
         ),
       ),
@@ -664,7 +710,7 @@ abstract final class LedgerTheme {
             LedgerText.buttonSm,
           ),
           shape: const WidgetStatePropertyAll<OutlinedBorder>(
-            Corner.pillBorder,
+            Corner.buttonBorder,
           ),
         ),
       ),
@@ -728,6 +774,38 @@ abstract final class LedgerTheme {
         foregroundColor: colors.onPrimary,
         titleTextStyle: LedgerText.headingSm.copyWith(color: colors.onPrimary),
         shape: Border(bottom: BorderSide(color: colors.darkHairline)),
+      ),
+      // Nút chữ của bảng sáng dùng mực `primary` — chính là màu nền của màn
+      // này, nên trên nền tối nó gần như biến mất. Bảng tối phải có màu nút
+      // riêng, nếu không "Clear results" đọc như một nút đã bị khoá.
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colors.primarySubdued,
+          disabledForegroundColor: colors.darkInkMute.withValues(alpha: 0.45),
+          textStyle: LedgerText.buttonSm,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colors.primarySubdued,
+          disabledForegroundColor: colors.darkInkMute.withValues(alpha: 0.45),
+          side: BorderSide(color: colors.darkHairline),
+          textStyle: LedgerText.buttonSm,
+          shape: Corner.buttonBorder,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: colors.primarySoft,
+          foregroundColor: colors.onPrimary,
+          disabledBackgroundColor: colors.darkSurface,
+          disabledForegroundColor: colors.darkInkMute,
+          textStyle: LedgerText.buttonSm,
+          shape: Corner.buttonBorder,
+          // 44dp là sàn vùng chạm: màn này mở được cả trên điện thoại.
+          minimumSize: const Size(64, 44),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+        ),
       ),
       dividerColor: colors.darkHairline,
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../shared/responsive/breakpoints.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/viewport_center.dart';
 import '../bloc/transactions_state.dart';
 import '../view_models/transaction_row_view_model.dart';
 import 'transaction_row_tile.dart';
@@ -61,8 +62,7 @@ class _TransactionListViewState extends State<TransactionListView> {
     final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
 
     if (state.isEmpty) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(Gap.screen),
+      return ViewportCenter(
         child: state.isNarrowed
             ? EmptyState(
                 title: 'No transactions match',
@@ -132,13 +132,36 @@ class _TransactionListViewState extends State<TransactionListView> {
       return ColoredBox(color: colors.canvasSoft, child: refreshable);
     }
 
-    return Column(
-      children: <Widget>[
-        const TransactionTableHeader(),
-        Expanded(
-          child: ColoredBox(color: colors.canvasSoft, child: refreshable),
+    // Bảng là một **panel** trong tab, không phải nền của tab.
+    //
+    // Trước đây nó tràn sát bốn mép cửa sổ: trên màn hình rộng, vài nghìn dòng
+    // chữ chạy hết bề ngang mà không có lề nào để mắt nghỉ, và không còn gì nói
+    // đâu là vùng dữ liệu, đâu là khung ứng dụng. Đây đúng là hình thức level-0
+    // mà DESIGN.md đặt cho card, panel và bảng: nền phẳng `canvas-soft`, viền
+    // 1px `hairline`, bo góc — nổi trên nền trắng của chrome mà không cần bóng.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Gap.screen,
+        Gap.md,
+        Gap.screen,
+        Gap.screen,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.canvasSoft,
+          borderRadius: Corner.radiusMd,
+          border: Border.all(color: colors.hairline),
         ),
-      ],
+        // Header dính đỉnh và dòng đang chọn có chỉ báo dọc sát mép trái; cả
+        // hai phải bị cắt theo góc bo, nếu không chúng chìa ra ngoài viền.
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: <Widget>[
+            const TransactionTableHeader(),
+            Expanded(child: refreshable),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -35,8 +35,8 @@ class AccountMismatchNotice extends StatelessWidget {
       'The number in this file does not match the number recorded for the '
       'selected account.',
       detail:
-          'Trong file: ${check.embeddedAccountNumber ?? '—'} · '
-          'Recorded: ${check.recordedAccountNumber ?? '—'}',
+          'In this file: ${check.embeddedAccountNumber ?? '—'} · '
+          'On record: ${check.recordedAccountNumber ?? '—'}',
     ),
     action: Wrap(
       spacing: Gap.sm,
