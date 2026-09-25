@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
-import '../../shared/responsive/breakpoints.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/viewport_center.dart';
 import '../bloc/transactions_state.dart';
@@ -57,9 +56,7 @@ class _TransactionListViewState extends State<TransactionListView> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.ledger;
     final state = widget.state;
-    final sizeClass = WindowSizeClass.of(MediaQuery.sizeOf(context).width);
 
     if (state.isEmpty) {
       return ViewportCenter(
@@ -83,7 +80,20 @@ class _TransactionListViewState extends State<TransactionListView> {
       );
     }
 
-    final isTable = !sizeClass.usesBottomNavigation;
+    // Bảng hay card do bề ngang thật của vùng chứa quyết định, không do cỡ cửa
+    // sổ: nav rail, panel chi tiết và panel lọc đều lấy bớt chỗ, nên một cửa sổ
+    // "đủ rộng" vẫn có thể để lại cho danh sách ít hơn bốn cột cố định cần.
+    return LayoutBuilder(
+      builder: (context, constraints) => _buildRows(
+        context,
+        isTable: constraints.maxWidth >= TransactionColumns.minTableWidth,
+      ),
+    );
+  }
+
+  Widget _buildRows(BuildContext context, {required bool isTable}) {
+    final colors = context.ledger;
+    final state = widget.state;
     // Một mục phụ ở cuối khi còn trang sau, để chỗ cho chỉ báo đang nạp.
     final itemCount = state.rows.length + (state.hasMore ? 1 : 0);
 

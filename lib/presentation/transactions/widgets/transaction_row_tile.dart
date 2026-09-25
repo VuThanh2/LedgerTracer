@@ -31,6 +31,19 @@ abstract final class TransactionColumns {
   static const double status = 152;
   static const double amount = 160;
 
+  /// Bề ngang hẹp nhất mà bảng còn dựng được: bốn cột cố định, một sàn cho hai
+  /// cột chữ co giãn, và lề + viền của panel bao quanh.
+  ///
+  /// Hẹp hơn mức này bốn cột cố định đã ăn hết chỗ và dòng bảng tràn phải. Đo
+  /// theo bề ngang **thực** của vùng chứa chứ không theo cỡ cửa sổ, vì nav rail
+  /// và các panel bên cạnh đều lấy bớt chỗ của bảng.
+  ///
+  /// Sàn 170px cho cột chữ chọn để cửa sổ 1024px (breakpoint Expanded, nav rail
+  /// 216px, còn 174px cho cột chữ) vẫn ra bảng — đó là điểm thiết kế hẹp nhất
+  /// mà bảng đã chạy đúng từ trước.
+  static const double minTableWidth =
+      date + account + status + amount + 170 + 2 * Gap.screen + 2;
+
   /// Kẻ đậm mỗi 5 dòng để mắt bám hàng khi cuộn qua hàng nghìn dòng.
   static bool isRulerRow(int index) => index % 5 == 4;
 

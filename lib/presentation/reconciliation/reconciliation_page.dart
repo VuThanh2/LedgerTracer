@@ -192,9 +192,9 @@ class _Toolbar extends StatelessWidget {
       enabled: !state.isRunning,
       onChanged: (days) => bloc.add(ReconciliationMatchWindowChanged(days)),
     );
-    final segmented = VerdictSegmentedControl(
+    Widget segmentedControl({required bool expand}) => VerdictSegmentedControl(
       state: state,
-      expand: compact,
+      expand: expand,
       onSelected: (group) => bloc.add(ReconciliationGroupSelected(group)),
     );
     final runButton = FilledButton(
@@ -207,52 +207,88 @@ class _Toolbar extends StatelessWidget {
     // hạn thì nó chỉ tới được sau khi cuộn hết những gì đã nạp.
     final exportButton = _ExportGroupButton(state: state, iconOnly: compact);
 
-    return Container(
-      padding: const EdgeInsets.all(Gap.screen),
-      decoration: BoxDecoration(
-        color: colors.canvas,
-        border: Border(bottom: BorderSide(color: colors.hairline)),
-      ),
-      child: compact
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Row(
+    // Một hàng duy nhất chỉ vừa khi vùng chứa đủ rộng. Quyết định theo bề ngang
+    // **thực** chứ không theo cỡ cửa sổ: nav rail lấy đi tới 216px, nên một cửa
+    // sổ 1280px vẫn chỉ để lại cho thanh công cụ khoảng 1060px.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final singleRow = !compact && constraints.maxWidth >= _singleRowMinWidth;
+        return Container(
+          padding: const EdgeInsets.all(Gap.screen),
+          decoration: BoxDecoration(
+            color: colors.canvas,
+            border: Border(bottom: BorderSide(color: colors.hairline)),
+          ),
+          child: singleRow
+              ? Row(
                   children: <Widget>[
                     matchWindow,
+                    const SizedBox(width: Gap.lg),
+                    Flexible(
+                      child: Text(
+                        'Applies to the next scan only. Confirmed pairs are '
+                        'never touched.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: LedgerText.caption.copyWith(
+                          color: colors.inkMute,
+                        ),
+                      ),
+                    ),
                     const Spacer(),
+                    segmentedControl(expand: false),
+                    const SizedBox(width: Gap.md),
                     exportButton,
                     const SizedBox(width: Gap.sm),
                     runButton,
                   ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // `Wrap` chứ không `Row`: ở bề ngang rất hẹp, cụm nút xuống
+                    // dòng thay vì tràn ra ngoài mép.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: Gap.md,
+                      runSpacing: Gap.sm,
+                      children: <Widget>[
+                        matchWindow,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            exportButton,
+                            const SizedBox(width: Gap.sm),
+                            runButton,
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: Gap.md),
+                    // Luôn ở dạng `expand` (các ô chia đều bề ngang, chữ tự cắt):
+                    // dạng ôm vừa cần ~630px và tràn phải ở mọi cửa sổ 600–800px.
+                    // Trần 680px giữ nó khỏi bị kéo giãn quá mức ở vùng rộng hơn.
+                    if (compact)
+                      segmentedControl(expand: true)
+                    else
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 680),
+                          child: segmentedControl(expand: true),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: Gap.md),
-                segmented,
-              ],
-            )
-          : Row(
-              children: <Widget>[
-                matchWindow,
-                const SizedBox(width: Gap.lg),
-                Flexible(
-                  child: Text(
-                    'Applies to the next scan only. Confirmed pairs are never '
-                    'touched.',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: LedgerText.caption.copyWith(color: colors.inkMute),
-                  ),
-                ),
-                const Spacer(),
-                segmented,
-                const SizedBox(width: Gap.md),
-                exportButton,
-                const SizedBox(width: Gap.sm),
-                runButton,
-              ],
-            ),
+        );
+      },
     );
   }
+
+  /// Bề ngang tối thiểu của vùng chứa để cả thanh công cụ nằm trên một hàng: đo
+  /// được khoảng 1132px nội dung cộng 2 × [Gap.screen] đệm.
+  static const double _singleRowMinWidth = 1180;
 }
 
 /// Xuất nhóm phán quyết đang xem.
