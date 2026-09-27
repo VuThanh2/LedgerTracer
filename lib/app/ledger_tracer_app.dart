@@ -11,6 +11,7 @@ import '../presentation/settings/bloc/app_lock_bloc.dart';
 import '../presentation/settings/bloc/app_lock_event.dart';
 import '../presentation/settings/bloc/app_lock_state.dart';
 import '../presentation/shared/export/bloc/export_bloc.dart';
+import '../presentation/shared/widgets/min_viewport_guard.dart';
 import '../presentation/shared/widgets/notice_overlay.dart';
 import '../presentation/shell/app_shell.dart';
 import '../presentation/shell/bloc/app_shell_bloc.dart';
@@ -141,8 +142,11 @@ class _LedgerMaterialApp extends StatelessWidget {
     home: const _AppLockGate(),
     // Chong thong bao dung tren Navigator, nen no van nhin thay duoc khi co
     // hop thoai dang mo.
-    builder: (context, child) =>
-        NoticeOverlay(child: child ?? const SizedBox.shrink()),
+    // Ngoài cùng: dưới sàn kích thước thì cả ứng dụng, thông báo nổi cũng vậy,
+    // dựng ở cỡ sàn và cuộn được, thay vì tràn.
+    builder: (context, child) => MinViewportGuard(
+      child: NoticeOverlay(child: child ?? const SizedBox.shrink()),
+    ),
   );
 }
 
