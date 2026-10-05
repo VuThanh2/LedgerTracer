@@ -35,7 +35,11 @@ class WorkloadControls extends StatelessWidget {
   static const List<int> repeatCounts = <int>[1, 3, 5];
 
   static const List<int> batchSizes = <int>[500, 2000, 8000];
-  static const List<int> sampleSizes = <int>[50000, 200000, 500000];
+
+  /// Mốc 1k nằm dưới ngưỡng mà chi phí dựng isolate còn đáng kể so với phần
+  /// việc thật, nên nó là mốc duy nhất cho thấy điểm hoà vốn của chiến lược
+  /// isolate; ba mốc còn lại đều đã nằm hẳn bên kia ngưỡng đó.
+  static const List<int> sampleSizes = <int>[1000, 50000, 200000, 500000];
 
   @override
   Widget build(BuildContext context) {

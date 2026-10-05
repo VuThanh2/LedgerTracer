@@ -75,7 +75,7 @@ class _RunCard extends StatelessWidget {
                     borderRadius: Corner.pill,
                   ),
                   child: Text(
-                    'FELL BACK TO THE INTERFACE THREAD',
+                    'FELL BACK TO THE MAIN THREAD',
                     style: LedgerText.microCap.copyWith(color: colors.lemonInk),
                   ),
                 ),

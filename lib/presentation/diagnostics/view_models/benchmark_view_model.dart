@@ -162,6 +162,6 @@ final class BenchmarkRunViewModel {
 
   static String _modeLabelOf(ExecutionMode mode) => switch (mode) {
     ExecutionMode.isolate => 'Background isolate',
-    ExecutionMode.mainThread => 'Interface thread',
+    ExecutionMode.mainThread => 'Main thread',
   };
 }

@@ -42,7 +42,7 @@ enum DiagnosticsTest {
 
 String modeLabelOf(ExecutionMode mode) => switch (mode) {
   ExecutionMode.isolate => 'Background isolate',
-  ExecutionMode.mainThread => 'Interface thread',
+  ExecutionMode.mainThread => 'Main thread',
 };
 
 /// Một dòng của bảng độ trễ huỷ.

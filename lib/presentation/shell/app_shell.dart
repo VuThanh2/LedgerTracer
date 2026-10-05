@@ -172,12 +172,23 @@ class _AppShellState extends State<AppShell> {
             // thể thuộc về một tab nào.
             if (!compact) const _BackgroundWorkIndicator(asStrip: true),
             if (state.recoveryNotice case final notice?)
-              Padding(
-                padding: const EdgeInsets.all(Gap.screen),
-                child: BannerMessage(
-                  notice,
-                  onDismiss: () => context.read<AppShellBloc>().add(
-                    const AppShellRecoveryNoticeDismissed(),
+              // Có trần chiều cao và tự cuộn bên trong: câu này xuống dòng rất
+              // nhiều ở cửa sổ hẹp (~230px ở 320px bề ngang), và một banner
+              // không giới hạn nằm trong `Column` cứng sẽ ăn gần hết màn hình,
+              // để phần nội dung bên dưới không còn chỗ.
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.3,
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(Gap.screen),
+                    child: BannerMessage(
+                      notice,
+                      onDismiss: () => context.read<AppShellBloc>().add(
+                        const AppShellRecoveryNoticeDismissed(),
+                      ),
+                    ),
                   ),
                 ),
               ),

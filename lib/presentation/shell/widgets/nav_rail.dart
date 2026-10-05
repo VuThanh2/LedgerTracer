@@ -46,44 +46,65 @@ class NavRail extends StatelessWidget {
         color: colors.canvasSoft,
         border: Border(right: BorderSide(color: colors.hairline)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          if (showLabels)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.sm, 6, Gap.sm, Gap.lg),
+      // Cuộn được khi cửa sổ thấp hơn chiều cao các ô: một `Column` cứng với
+      // `Spacer` sẽ tràn đáy và không còn cách nào chạm tới ô Settings. Đủ chỗ
+      // thì `minHeight` + `IntrinsicHeight` vẫn dồn Settings xuống đáy như cũ.
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Text(
-                    'LedgerTracer',
-                    style: LedgerText.headingSm.copyWith(color: colors.ink),
-                  ),
-                  Text(
-                    'Offline · on this device',
-                    style: LedgerText.caption.copyWith(color: colors.inkMute),
+                  if (showLabels)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        Gap.sm,
+                        6,
+                        Gap.sm,
+                        Gap.lg,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'LedgerTracer',
+                            style: LedgerText.headingSm.copyWith(
+                              color: colors.ink,
+                            ),
+                          ),
+                          Text(
+                            'Offline · on this device',
+                            style: LedgerText.caption.copyWith(
+                              color: colors.inkMute,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  for (final option in NavDestination.values)
+                    _RailTile(
+                      icon: navIconOf(option),
+                      label: option.label,
+                      selected: option == destination,
+                      showLabel: showLabels,
+                      onTap: () => onSelected(option),
+                    ),
+                  const Spacer(),
+                  Divider(color: colors.hairline, height: Gap.lg),
+                  _RailTile(
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    selected: settingsSelected,
+                    showLabel: showLabels,
+                    onTap: onSettings,
                   ),
                 ],
               ),
             ),
-          for (final option in NavDestination.values)
-            _RailTile(
-              icon: navIconOf(option),
-              label: option.label,
-              selected: option == destination,
-              showLabel: showLabels,
-              onTap: () => onSelected(option),
-            ),
-          const Spacer(),
-          Divider(color: colors.hairline, height: Gap.lg),
-          _RailTile(
-            icon: Icons.settings_outlined,
-            label: 'Settings',
-            selected: settingsSelected,
-            showLabel: showLabels,
-            onTap: onSettings,
           ),
-        ],
+        ),
       ),
     );
   }
