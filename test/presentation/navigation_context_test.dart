@@ -70,7 +70,7 @@ void main() {
     });
   });
 
-  group('khoan xuống từ Thống kê (UC-10 → UC-04)', () {
+  group('khoan xuống từ Thống kê', () {
     const state = StatisticsState(
       status: LoadStatus.ready,
       currency: Currency.usd,
@@ -212,7 +212,7 @@ void main() {
     });
   });
 
-  group('Export Dialog xuất đúng thứ đang hiển thị (UC-11)', () {
+  group('Export Dialog xuất đúng thứ đang hiển thị', () {
     test('chip ngữ cảnh đi vào chính bộ tiêu chí của file xuất', () {
       const context = TransactionContext(
         importFileRecordId: 4,

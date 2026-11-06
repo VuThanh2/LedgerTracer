@@ -18,8 +18,8 @@ enum BenchmarkWorkload {
   reconciliationScan;
 
   String get label => switch (this) {
-    BenchmarkWorkload.statementImport => 'Statement import (UC-02)',
-    BenchmarkWorkload.reconciliationScan => 'Reconciliation scan (UC-08)',
+    BenchmarkWorkload.statementImport => 'Statement import',
+    BenchmarkWorkload.reconciliationScan => 'Reconciliation scan',
   };
 
   int get defaultBatchSize => switch (this) {

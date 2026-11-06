@@ -82,7 +82,7 @@ void main() {
       ..add(const DiagnosticsRunRequested());
     final state = await finished();
     expect(state.backpressureRuns, hasLength(1));
-    expect(state.backpressureRuns.single.modeLabel, 'Interface thread');
+    expect(state.backpressureRuns.single.modeLabel, 'Main thread');
     expect(state.backpressureRuns.single.peakBatchesText, '1');
   });
 

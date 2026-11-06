@@ -96,7 +96,7 @@ void main() {
     );
   }
 
-  group('xoá lẻ một giao dịch (UC-05)', () {
+  group('xoá lẻ một giao dịch', () {
     test('huỷ cặp và trả vế còn lại về trạng thái chưa ghép', () async {
       final world = await pairedWorld();
 
@@ -162,7 +162,7 @@ void main() {
     });
   });
 
-  group('xoá tài khoản (UC-01)', () {
+  group('xoá tài khoản', () {
     test('xoá theo cả giao dịch, cặp, phán quyết và bản ghi nhập của nó', () async {
       final world = await pairedWorld();
 
@@ -223,7 +223,7 @@ void main() {
     });
   });
 
-  group('hoàn tác một lượt nhập (UC-03)', () {
+  group('hoàn tác một lượt nhập', () {
     test('xoá đúng những gì bản ghi đó đã thêm', () async {
       final world = await pairedWorld();
       await seed.closeRecord(recordA);
