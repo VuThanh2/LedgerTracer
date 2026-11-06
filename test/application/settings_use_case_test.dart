@@ -13,7 +13,7 @@ import '_support/fake_repositories.dart';
 void main() {
   final now = DateTime.utc(2025, 10, 5, 14, 30, 15);
 
-  group('khoá ứng dụng (UC-12)', () {
+  group('khoá ứng dụng', () {
     late FakeDatabase db;
     late FakeBiometricAuthenticator biometric;
     late AppLockUseCase appLock;
@@ -159,7 +159,7 @@ void main() {
     });
   });
 
-  group('sao lưu và khôi phục (UC-13)', () {
+  group('sao lưu và khôi phục', () {
     late FakeAppDataStore store;
     late FakeBackupWriter writer;
     late BackupRestoreUseCase backupRestore;
@@ -282,7 +282,7 @@ void main() {
     });
   });
 
-  group('reset ứng dụng (UC-12)', () {
+  group('reset ứng dụng', () {
     test('xoá sạch dữ liệu cục bộ — lối thoát duy nhất khi quên PIN', () async {
       final store = FakeAppDataStore();
       final resetApp = ResetAppUseCase(store: store);

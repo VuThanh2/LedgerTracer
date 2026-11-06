@@ -99,7 +99,7 @@ void main() {
       expect(run.producerFinishedAfter, lessThan(run.consumerFinishedAfter));
     });
 
-    test('luồng chính: không bao giờ có hơn một lô nằm chờ (UC-14)', () async {
+    test('luồng chính: không bao giờ có hơn một lô nằm chờ', () async {
       final run = valueOf(
         await web.measureBackpressure(
           sampleSize: sampleSize,

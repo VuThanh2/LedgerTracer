@@ -80,7 +80,7 @@ void main() {
   String contentOf(ExportResult result) =>
       FakeTabularExporter.decode(fileSaver.savedBytes.last);
 
-  group('xuất dữ liệu (UC-11)', () {
+  group('xuất dữ liệu', () {
     test('xuất danh sách giao dịch kèm loại tiền ở từng dòng', () async {
       // Một cột "1.000" trống trơn trong bảng gộp nhiều loại tiền sẽ bị mặc định
       // hiểu là VND.
@@ -478,7 +478,7 @@ void main() {
     });
   });
 
-  group('thống kê dòng tiền (UC-10)', () {
+  group('thống kê dòng tiền', () {
     test('gom theo tháng, tách tiền vào và tiền ra', () async {
       await tx(month: 1, amount: 1000000);
       await tx(month: 1, amount: -400000, day: 20);
