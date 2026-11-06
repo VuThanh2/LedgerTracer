@@ -56,3 +56,7 @@ sample_data/large/
 /CLAUDE.md
 /GEMINI.md
 /data
+
+# Vercel
+/flutter/
+.vercel
